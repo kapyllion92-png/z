@@ -1,5 +1,6 @@
 from app.services.historical.database import HistoricalDatabase
 from app.services.features.builder import FeatureBuilder
+from app.services.strategies.trend import TrendStrategy
 
 
 def main():
@@ -12,13 +13,18 @@ def main():
         100,
     )
 
-    builder = FeatureBuilder()
-
-    features = builder.build(
+    features = FeatureBuilder().build(
         candles[::-1]
     )
 
+
+    analysis = TrendStrategy().analyze(
+        features
+    )
+
+
     print(features)
+    print(analysis)
 
 
 if __name__ == "__main__":

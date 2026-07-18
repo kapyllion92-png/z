@@ -1,7 +1,6 @@
-from app.services.historical.database import HistoricalDatabase
-from app.services.features.builder import FeatureBuilder
-from app.services.strategies.trend import TrendStrategy
-from app.services.ranking.scorer import SignalScorer
+﻿from app.services.historical.database import HistoricalDatabase
+from app.services.market_analyzer import MarketAnalyzer
+
 
 
 def main():
@@ -16,33 +15,42 @@ def main():
     )
 
 
-    features = FeatureBuilder().build(
+    analyzer = MarketAnalyzer()
+
+
+    result = analyzer.analyze(
         candles[::-1]
-    )
-
-
-    analysis = TrendStrategy().analyze(
-        features
-    )
-
-
-    ranking = SignalScorer().score(
-        features,
-        analysis
     )
 
 
     print()
     print("=== MARKET FEATURES ===")
-    print(features)
+    print(result["features"])
+
 
     print()
     print("=== STRATEGY ===")
-    print(analysis)
+    print(result["strategy"])
+
+
+    print()
+    print("=== MARKET STRUCTURE ===")
+    print(result["structure"])
+
 
     print()
     print("=== SIGNAL RANKING ===")
-    print(ranking)
+    print(result["ranking"])
+
+
+    print()
+    print("=== ENTRY SETUP ===")
+    print(result["entry"])
+
+
+    print()
+    print("=== TRADE PLAN ===")
+    print(result["trade_plan"])
 
 
 

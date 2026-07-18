@@ -13,3 +13,6 @@ class BybitClient:
 
     def get_status(self):
         return "Bybit API client ready"
+
+    def get_server_time(self):
+        return self.session.get_server_time()

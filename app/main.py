@@ -1,29 +1,16 @@
-from app.services.historical.collector import HistoricalCollector
-from app.services.historical.database import HistoricalDatabase
+from app.services.historical.loader import HistoricalLoader
 
 
 def main():
 
-    collector = HistoricalCollector()
+    loader = HistoricalLoader()
 
-    saved = collector.collect(
-        symbol="BTCUSDT",
-        interval="60",
-        limit=200,
+    total = loader.load_market_history()
+
+    print(
+        "Total candles saved:",
+        total
     )
-
-    print("Saved candles:", saved)
-
-
-    database = HistoricalDatabase()
-
-    history = database.get_candles(
-        "BTCUSDT",
-        "60",
-        5,
-    )
-
-    print(history)
 
 
 if __name__ == "__main__":

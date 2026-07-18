@@ -1,18 +1,30 @@
-from app.services.market_data.candles import CandleDataEngine
-from app.services.market_data.parser import parse_candles
+from app.services.historical.collector import HistoricalCollector
+from app.services.historical.database import HistoricalDatabase
 
 
 def main():
-    engine = CandleDataEngine()
 
-    response = engine.get_candles(
+    collector = HistoricalCollector()
+
+    saved = collector.collect(
         symbol="BTCUSDT",
         interval="60",
-        limit=5,
+        limit=200,
     )
 
-    raw_candles = response["result"]["list"]
+    print("Saved candles:", saved)
 
-    candles = parse_candles(raw_candles)
 
-    print(candles[0])
+    database = HistoricalDatabase()
+
+    history = database.get_candles(
+        "BTCUSDT",
+        "60",
+        5,
+    )
+
+    print(history)
+
+
+if __name__ == "__main__":
+    main()

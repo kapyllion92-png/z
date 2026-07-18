@@ -1,14 +1,18 @@
-from app.core.config import PROJECT_NAME, VERSION
-from app.services.bybit.client import BybitClient
+from app.services.market_data.candles import CandleDataEngine
+from app.services.market_data.parser import parse_candles
 
 
 def main():
-    print(PROJECT_NAME)
-    print(VERSION)
+    engine = CandleDataEngine()
 
-    client = BybitClient()
+    response = engine.get_candles(
+        symbol="BTCUSDT",
+        interval="60",
+        limit=5,
+    )
 
-    print(client.get_status())
+    raw_candles = response["result"]["list"]
 
-    server_time = client.get_server_time()
-    print(server_time)
+    candles = parse_candles(raw_candles)
+
+    print(candles[0])

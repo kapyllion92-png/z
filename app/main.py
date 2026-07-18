@@ -1,16 +1,24 @@
-from app.services.historical.loader import HistoricalLoader
+from app.services.historical.database import HistoricalDatabase
+from app.services.features.builder import FeatureBuilder
 
 
 def main():
 
-    loader = HistoricalLoader()
+    db = HistoricalDatabase()
 
-    total = loader.load_market_history()
-
-    print(
-        "Total candles saved:",
-        total
+    candles = db.get_candles(
+        "BTCUSDT",
+        "60",
+        100,
     )
+
+    builder = FeatureBuilder()
+
+    features = builder.build(
+        candles[::-1]
+    )
+
+    print(features)
 
 
 if __name__ == "__main__":

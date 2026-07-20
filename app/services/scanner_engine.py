@@ -66,6 +66,10 @@ class ScannerEngine:
                 "symbol": symbol,
                 "candles": candles,
                 "price": price,
+                "close": price,
+                "sma": (sum(closes[-20:]) / 20),
+                "high": max(closes[-20:]),
+                "low": min(closes[-20:]),
                 "closes": closes,
                 "volumes": volumes
 
@@ -172,9 +176,7 @@ class ScannerEngine:
                 try:
 
                     strategy_result = (
-                        self.strategy_engine.analyze(
-                            features
-                        )
+                        self.strategy_engine.analyze(features)
                     )
 
 
@@ -208,9 +210,7 @@ class ScannerEngine:
                 try:
 
                     ai_result = (
-                        self.ai.predict(
-                            features
-                        )
+                        self.ai.predict(features, strategy_result)
                     )
 
 
@@ -275,7 +275,7 @@ class ScannerEngine:
             )
 
 
-            if score < 70:
+            if score < 50:
 
                 return None
 
@@ -427,3 +427,11 @@ def get_signals():
 
 
     return SIGNALS[:10]
+
+
+
+
+
+
+
+

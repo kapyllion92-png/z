@@ -1,22 +1,18 @@
-﻿from app.services.historical.database import HistoricalDatabase
 from app.services.market_analyzer import MarketAnalyzer
-
+from app.services.historical.database import HistoricalDatabase
 
 
 def main():
 
     db = HistoricalDatabase()
 
+    analyzer = MarketAnalyzer()
 
     candles = db.get_candles(
         "BTCUSDT",
         "60",
-        100,
+        100
     )
-
-
-    analyzer = MarketAnalyzer()
-
 
     result = analyzer.analyze(
         candles[::-1]
@@ -25,32 +21,37 @@ def main():
 
     print()
     print("=== MARKET FEATURES ===")
-    print(result["features"])
+    print(result.get("features"))
+
+
+    print()
+    print("=== SMART MONEY ===")
+    print(result.get("smart_money"))
 
 
     print()
     print("=== STRATEGY ===")
-    print(result["strategy"])
+    print(result.get("strategy"))
 
 
     print()
     print("=== MARKET STRUCTURE ===")
-    print(result["structure"])
+    print(result.get("structure"))
 
 
     print()
     print("=== SIGNAL RANKING ===")
-    print(result["ranking"])
+    print(result.get("ranking"))
 
 
     print()
     print("=== ENTRY SETUP ===")
-    print(result["entry"])
+    print(result.get("entry"))
 
 
     print()
     print("=== TRADE PLAN ===")
-    print(result["trade_plan"])
+    print(result.get("trade_plan"))
 
 
 

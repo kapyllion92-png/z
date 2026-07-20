@@ -1,6 +1,7 @@
-﻿from app.services.indicator_engine import IndicatorEngine
+from app.services.indicator_engine import IndicatorEngine
 from app.services.score_engine import ScoreEngine
 from app.services.entry_predictor import EntryPredictor
+from app.services.smart_money_engine import SmartMoneyEngine
 
 
 class MarketAnalyzer:
@@ -14,6 +15,8 @@ class MarketAnalyzer:
 
         self.predictor = EntryPredictor()
 
+        self.smart_money = SmartMoneyEngine()
+
 
 
     def analyze(self, candles):
@@ -23,6 +26,8 @@ class MarketAnalyzer:
 
 
         features = self.indicators.analyze(candles)
+
+        smart_money = self.smart_money.analyze(candles)
 
 
         print("FEATURES:", features)
@@ -247,9 +252,9 @@ class MarketAnalyzer:
         return {
 
 
-            "features":
+            "smart_money": smart_money,
 
-                features,
+            "features": features,
 
 
             "strategy":

@@ -1,91 +1,51 @@
-﻿class TerminalView:
+from datetime import datetime
 
 
-    def show_signals(self, signals):
+class TerminalView:
 
+    def show_report(self, result):
 
         print()
+        print("=" * 60)
+        print("BYBIT PRO TERMINAL X")
+        print(datetime.now())
+        print("=" * 60)
 
-        print("================================")
+        print()
+        print("MARKET:")
+        print(result.get("features"))
 
-        print("     TOP-10 БУДУЩИХ СДЕЛОК")
+        print()
+        print("SMART MONEY:")
+        print(result.get("smart_money"))
 
-        print("================================")
+        print()
+        print("SIGNAL:")
+        strategy = result.get("strategy", {})
+        print(
+            f"{strategy.get('signal')} | "
+            f"SCORE {strategy.get('score')} | "
+            f"CONFIDENCE {strategy.get('confidence')}"
+        )
 
+        print()
+        print("ENTRY:")
+        print(result.get("entry"))
 
-        if not signals:
+        print()
+        print("TRADE PLAN:")
+        plan = result.get("trade_plan", {})
 
-            print()
+        print(
+            f"""
+STATUS: {plan.get('status')}
+DIRECTION: {plan.get('direction')}
+ENTRY ZONE: {plan.get('entry_zone')}
+STOP LOSS: {plan.get('stop_loss')}
+TAKE PROFIT: {plan.get('take_profit')}
+RISK/REWARD: {plan.get('risk_reward')}
+CONFIDENCE: {plan.get('confidence')}%
+"""
+        )
 
-            print("Сигналов нет")
-
-            return
-
-
-
-        for index, signal in enumerate(
-            signals,
-            start=1
-        ):
-
-
-            print()
-
-            print(
-                f"#{index} {signal.get('монета')}"
-            )
-
-
-            print(
-                "Направление:",
-                signal.get("направление")
-            )
-
-
-            print(
-                "Стратегия:",
-                signal.get("стратегия")
-            )
-
-
-            print(
-                "Сила:",
-                signal.get("итоговая_оценка"),
-                "/100"
-            )
-
-
-            print(
-                "Потенциал:",
-                signal.get("ожидаемый_профит"),
-                "%"
-            )
-
-
-            print()
-
-            print("Почему:")
-
-
-            for reason in signal.get(
-                "причины",
-                []
-            ):
-
-                print(
-                    "✓",
-                    reason
-                )
-
-
-            print()
-
-            print(
-                "Статус:",
-                signal.get(
-                    "статус",
-                    "НАБЛЮДЕНИЕ"
-                )
-            )
-
-            print("--------------------------------")
+        print("=" * 60)

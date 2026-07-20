@@ -1,5 +1,6 @@
 from app.services.market_analyzer import MarketAnalyzer
 from app.services.historical.database import HistoricalDatabase
+from app.services.terminal_view import TerminalView
 
 
 def main():
@@ -7,6 +8,8 @@ def main():
     db = HistoricalDatabase()
 
     analyzer = MarketAnalyzer()
+
+    view = TerminalView()
 
     candles = db.get_candles(
         "BTCUSDT",
@@ -18,41 +21,7 @@ def main():
         candles[::-1]
     )
 
-
-    print()
-    print("=== MARKET FEATURES ===")
-    print(result.get("features"))
-
-
-    print()
-    print("=== SMART MONEY ===")
-    print(result.get("smart_money"))
-
-
-    print()
-    print("=== STRATEGY ===")
-    print(result.get("strategy"))
-
-
-    print()
-    print("=== MARKET STRUCTURE ===")
-    print(result.get("structure"))
-
-
-    print()
-    print("=== SIGNAL RANKING ===")
-    print(result.get("ranking"))
-
-
-    print()
-    print("=== ENTRY SETUP ===")
-    print(result.get("entry"))
-
-
-    print()
-    print("=== TRADE PLAN ===")
-    print(result.get("trade_plan"))
-
+    view.show_report(result)
 
 
 if __name__ == "__main__":

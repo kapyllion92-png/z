@@ -1,0 +1,7517 @@
+﻿
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\main.py ====================
+
+from app.services.historical.database import HistoricalDatabase
+from app.services.market_analyzer import MarketAnalyzer
+
+
+
+def main():
+
+    db = HistoricalDatabase()
+
+
+    candles = db.get_candles(
+        "BTCUSDT",
+        "60",
+        100,
+    )
+
+
+    analyzer = MarketAnalyzer()
+
+
+    result = analyzer.analyze(
+        candles[::-1]
+    )
+
+
+    print()
+    print("=== MARKET FEATURES ===")
+    print(result["features"])
+
+
+    print()
+    print("=== STRATEGY ===")
+    print(result["strategy"])
+
+
+    print()
+    print("=== MARKET STRUCTURE ===")
+    print(result["structure"])
+
+
+    print()
+    print("=== SIGNAL RANKING ===")
+    print(result["ranking"])
+
+
+    print()
+    print("=== ENTRY SETUP ===")
+    print(result["entry"])
+
+
+    print()
+    print("=== TRADE PLAN ===")
+    print(result["trade_plan"])
+
+
+
+if __name__ == "__main__":
+    main()
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\config\settings.py ====================
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+load_dotenv(
+    BASE_DIR / ".env"
+)
+
+
+TRADING_MODE = os.getenv(
+    "TRADING_MODE",
+    "SIMULATION"
+)
+
+
+EXCHANGE = os.getenv(
+    "EXCHANGE",
+    "BYBIT"
+)
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\config\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\core\config.py ====================
+
+PROJECT_NAME = "Bybit Pro Terminal X"
+VERSION = "0.1.0"
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\core\market_config.py ====================
+
+SYMBOLS = [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+]
+
+
+INTERVALS = [
+    "5",
+    "15",
+    "60",
+    "240",
+    "D",
+]
+
+
+DEFAULT_HISTORY_LIMIT = 1000
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\core\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\core\security\secrets.py ====================
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BYBIT_API_KEY = os.getenv("BYBIT_API_KEY", "")
+BYBIT_API_SECRET = os.getenv("BYBIT_API_SECRET", "")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\core\security\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\bybit_client.py ====================
+
+import requests
+
+
+class BybitClient:
+
+
+    BASE = "https://api.bybit.com"
+
+
+
+    def get_symbols(self):
+
+        url = self.BASE + "/v5/market/instruments-info"
+
+
+        params = {
+            "category": "linear"
+        }
+
+
+        r = requests.get(
+            url,
+            params=params,
+            timeout=10
+        )
+
+
+        data = r.json()
+
+
+        symbols = []
+
+
+        for item in data["result"]["list"]:
+
+            symbol = item.get(
+                "symbol",
+                ""
+            )
+
+
+            if symbol.endswith("USDT"):
+
+                symbols.append(symbol)
+
+
+
+        return symbols[:100]
+
+
+
+
+
+    def get_candles(self, symbol, interval, limit=200):
+
+
+        url = self.BASE + "/v5/market/kline"
+
+
+        params = {
+
+            "category": "linear",
+
+            "symbol": symbol,
+
+            "interval": interval,
+
+            "limit": limit
+
+        }
+
+
+        r = requests.get(
+
+            url,
+
+            params=params,
+
+            timeout=10
+
+        )
+
+
+        data = r.json()
+
+
+        rows = data["result"]["list"]
+
+
+        candles = []
+
+
+
+        for c in reversed(rows):
+
+
+            candles.append({
+
+                "time": int(c[0]),
+
+                "open": float(c[1]),
+
+                "high": float(c[2]),
+
+                "low": float(c[3]),
+
+                "close": float(c[4]),
+
+                "volume": float(c[5]),
+
+                "turnover": float(c[6])
+
+            })
+
+
+
+        return candles
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\bybit_simulator.py ====================
+
+class BybitSimulator:
+
+
+    def __init__(self):
+
+        self.exchange = "BYBIT"
+        self.mode = "SIMULATION"
+
+
+
+    def execute(
+        self,
+        execution
+    ):
+
+
+        if not execution:
+
+            return {
+
+                "status":
+                    "REJECTED",
+
+                "reason":
+                    "Empty execution"
+
+            }
+
+
+
+        if execution.get("status") != "READY":
+
+            return {
+
+                "status":
+                    "REJECTED",
+
+                "reason":
+                    "Execution not ready"
+
+            }
+
+
+
+        order = {
+
+
+            "exchange":
+                self.exchange,
+
+
+            "mode":
+                self.mode,
+
+
+            "side":
+                execution.get(
+                    "side"
+                ),
+
+
+            "entry":
+                execution.get(
+                    "entry"
+                ),
+
+
+            "stop_loss":
+                execution.get(
+                    "stop_loss"
+                ),
+
+
+            "take_profit":
+                execution.get(
+                    "take_profit"
+                ),
+
+
+            "quantity":
+                execution.get(
+                    "position_size"
+                ),
+
+
+            "risk_reward":
+                execution.get(
+                    "risk_reward"
+                ),
+
+
+            "status":
+                "ORDER_CREATED"
+
+        }
+
+
+        return order
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\entry_predictor.py ====================
+
+class EntryPredictor:
+
+
+    def predict(self, features, strategy):
+
+
+        price = features["close"]
+
+
+        reasons = []
+
+        score = 0
+
+
+
+        # 1. Сжатие волатильности
+
+        closes = features.get(
+            "closes",
+            []
+        )
+
+
+        if len(closes) >= 20:
+
+
+            high = max(closes[-20:])
+
+            low = min(closes[-20:])
+
+
+            range_percent = (
+
+                (high-low)
+
+                /
+
+                low
+
+                *
+
+                100
+
+            )
+
+
+            if range_percent < 2:
+
+
+                score += 15
+
+                reasons.append(
+                    "Цена находится в сжатии перед движением"
+                )
+
+
+
+        # 2. Объём
+
+
+        volumes = features.get(
+            "volumes",
+            []
+        )
+
+
+        if len(volumes) >= 20:
+
+
+            avg_volume = (
+
+                sum(volumes[-20:])
+
+                /
+
+                20
+
+            )
+
+
+            if volumes[-1] > avg_volume:
+
+
+                score += 20
+
+                reasons.append(
+                    "Аномальный объём"
+                )
+
+
+
+        # 3. Тренд
+
+
+        trend = features.get(
+            "trend"
+        )
+
+
+        if trend in [
+
+            "STRONG_BULLISH",
+
+            "STRONG_BEARISH"
+
+        ]:
+
+
+            score += 20
+
+            reasons.append(
+                "Сильное направление тренда"
+            )
+
+
+
+        # 4. Стратегия
+
+
+        if strategy.get(
+            "signal"
+        ) != "NO_TRADE":
+
+
+            score += 20
+
+            reasons.append(
+                "Есть подтверждённый сетап"
+            )
+
+
+
+        # 5. Потенциал движения
+
+
+        expected_profit = 3
+
+
+        if score >= 75:
+
+
+            status = "ГОТОВИТЬСЯ"
+
+
+        elif score >= 50:
+
+
+            status = "НАБЛЮДАТЬ"
+
+
+        else:
+
+
+            status = "СЛАБО"
+
+
+
+        return {
+
+
+            "готовность":
+
+                status,
+
+
+            "оценка":
+
+                score,
+
+
+            "ожидаемый_профит":
+
+                expected_profit,
+
+
+            "причины":
+
+                reasons,
+
+
+            "время_до_входа":
+
+                "15-25 минут"
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\entry_score.py ====================
+
+class EntryScore:
+
+
+    def calculate(self, features):
+
+
+        score = 0
+        reasons = []
+
+
+        signal = features.get(
+            "signal",
+            "WAIT"
+        )
+
+
+        ema20 = features["ema20"]
+        ema50 = features["ema50"]
+        ema200 = features["ema200"]
+
+
+
+        # EMA FILTER
+
+
+        if signal == "LONG":
+
+
+            if ema20 > ema50 > ema200:
+
+                score += 30
+
+                reasons.append(
+                    "EMA BULL CONFIRM +30"
+                )
+
+            else:
+
+                reasons.append(
+                    "EMA BLOCK LONG"
+                )
+
+
+
+        elif signal == "SHORT":
+
+
+            if ema20 < ema50 < ema200:
+
+                score += 30
+
+                reasons.append(
+                    "EMA BEAR CONFIRM +30"
+                )
+
+            else:
+
+                reasons.append(
+                    "EMA BLOCK SHORT"
+                )
+
+
+
+        # RSI
+
+
+        rsi = features.get(
+            "rsi",
+            50
+        )
+
+
+        if 45 <= rsi <= 60:
+
+            score += 20
+
+            reasons.append(
+                "RSI IDEAL +20"
+            )
+
+
+        elif 35 <= rsi <= 70:
+
+            score += 10
+
+            reasons.append(
+                "RSI GOOD +10"
+            )
+
+
+
+        # VOLUME
+
+
+        volumes = features.get(
+            "volumes",
+            []
+        )
+
+
+        if len(volumes) >= 20:
+
+
+            avg = sum(
+                volumes[-20:]
+            ) / 20
+
+
+            if volumes[-1] > avg:
+
+                score += 15
+
+                reasons.append(
+                    "HIGH VOLUME +15"
+                )
+
+
+
+        # ENTRY ZONE
+
+
+        close = features["close"]
+
+        sma = features["sma"]
+
+
+        distance = abs(
+            close-sma
+        )/sma
+
+
+
+        if distance < 0.003:
+
+
+            score += 20
+
+            reasons.append(
+                "GOOD ENTRY ZONE +20"
+            )
+
+
+        elif distance < 0.008:
+
+
+            score += 10
+
+            reasons.append(
+                "ENTRY ZONE +10"
+            )
+
+
+
+        if score >= 80:
+
+            grade="A"
+
+        elif score >=65:
+
+            grade="B"
+
+        elif score>=50:
+
+            grade="C"
+
+        else:
+
+            grade="D"
+
+
+
+        return {
+
+            "score":score,
+
+            "grade":grade,
+
+            "reasons":reasons
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\history_analyzer.py ====================
+
+import json
+import os
+
+
+class HistoryAnalyzer:
+
+
+    def __init__(self):
+
+        self.file = "app/data/history.json"
+
+
+        if not os.path.exists(self.file):
+
+            with open(
+                self.file,
+                "w",
+                encoding="utf-8"
+            ) as f:
+
+                json.dump(
+                    [],
+                    f
+                )
+
+
+
+    def save_pattern(self, data):
+
+
+        with open(
+            self.file,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            history = json.load(f)
+
+
+
+        history.append(data)
+
+
+
+        with open(
+            self.file,
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            json.dump(
+                history,
+                f,
+                indent=4,
+                ensure_ascii=False
+            )
+
+
+
+
+    def compare(self, current):
+
+
+        with open(
+            self.file,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            history = json.load(f)
+
+
+
+        if len(history) == 0:
+
+            return {
+
+                "совпадений":0,
+
+                "вероятность":0,
+
+                "вывод":"Недостаточно истории"
+
+            }
+
+
+
+        matches = 0
+
+        wins = 0
+
+
+
+        for item in history:
+
+
+            score = 0
+
+
+
+            if item.get("тренд") == current.get("тренд"):
+
+                score += 1
+
+
+
+            if item.get("rsi_zone") == current.get("rsi_zone"):
+
+                score += 1
+
+
+
+            if item.get("объём") == current.get("объём"):
+
+                score += 1
+
+
+
+            if score >= 2:
+
+                matches += 1
+
+
+
+                if item.get("результат") == "PROFIT":
+
+                    wins += 1
+
+
+
+
+        if matches == 0:
+
+            probability = 0
+
+        else:
+
+            probability = round(
+                wins / matches * 100,
+                2
+            )
+
+
+
+        return {
+
+
+            "совпадений":
+
+                matches,
+
+
+            "побед":
+
+                wins,
+
+
+            "вероятность":
+
+                probability,
+
+
+            "вывод":
+
+                "Хорошее совпадение"
+                if probability >= 65
+                else
+                "Слабое совпадение"
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\indicator_engine.py ====================
+
+class IndicatorEngine:
+
+
+    def analyze(self, candles):
+
+        closes = []
+        highs = []
+        lows = []
+        volumes = []
+
+
+        for c in candles:
+
+            if isinstance(c, dict):
+
+                closes.append(float(c["close"]))
+                highs.append(float(c.get("high", c["close"])))
+                lows.append(float(c.get("low", c["close"])))
+                volumes.append(float(c.get("volume", 0)))
+
+            else:
+
+                closes.append(float(c[4]))
+                highs.append(float(c[2]))
+                lows.append(float(c[3]))
+                volumes.append(float(c[5]))
+
+
+
+        result = {}
+
+
+        result["sma20"] = self.sma(closes,20)
+        result["sma50"] = self.sma(closes,50)
+        result["sma200"] = self.sma(closes,200)
+
+
+        result["ema20"] = self.ema(closes,20)
+        result["ema50"] = self.ema(closes,50)
+        result["ema200"] = self.ema(closes,200)
+
+
+        result["rsi"] = self.rsi(closes)
+
+
+        result["macd"] = (
+            result["ema20"]
+            -
+            result["ema50"]
+        )
+
+
+        result["atr"] = self.atr(
+            highs,
+            lows,
+            closes
+        )
+
+
+        avg_volume = (
+            sum(volumes[-20:]) / 20
+            if len(volumes) >= 20
+            else 0
+        )
+
+
+        result["volume_ratio"] = (
+
+            volumes[-1] / avg_volume
+
+            if avg_volume
+
+            else 0
+
+        )
+
+
+        result["vwap"] = self.vwap(
+            closes,
+            volumes
+        )
+
+
+        result["momentum"] = (
+
+            closes[-1] - closes[-10]
+
+            if len(closes) > 10
+
+            else 0
+
+        )
+
+
+        result["roc"] = (
+
+            (
+                closes[-1] / closes[-12]
+                - 1
+            ) * 100
+
+            if len(closes) > 12
+
+            else 0
+
+        )
+
+
+        high = max(highs[-14:])
+        low = min(lows[-14:])
+
+
+        result["williams_r"] = (
+
+            (
+                (high - closes[-1])
+                /
+                (high-low)
+                *
+                -100
+            )
+
+            if high != low
+
+            else 0
+
+        )
+
+
+
+        result["trend"] = (
+
+            "BULLISH"
+
+            if result["ema20"] > result["ema50"]
+
+            else "BEARISH"
+
+        )
+
+
+        return result
+
+
+
+
+    def sma(self,data,n):
+
+        if len(data) < n:
+
+            return sum(data)/len(data)
+
+        return sum(data[-n:])/n
+
+
+
+
+    def ema(self,data,n):
+
+        k = 2/(n+1)
+
+        value = data[0]
+
+
+        for price in data[1:]:
+
+            value = price*k + value*(1-k)
+
+
+        return value
+
+
+
+
+    def rsi(self,data,n=14):
+
+        if len(data)<=n:
+
+            return 0
+
+
+        gains = []
+        losses = []
+
+
+        for i in range(1,n+1):
+
+            diff = data[-i]-data[-i-1]
+
+
+            if diff > 0:
+
+                gains.append(diff)
+
+            else:
+
+                losses.append(abs(diff))
+
+
+        avg_gain = sum(gains)/n
+        avg_loss = sum(losses)/n
+
+
+        if avg_loss == 0:
+
+            return 100
+
+
+        rs = avg_gain/avg_loss
+
+
+        return round(
+            100-(100/(1+rs)),
+            2
+        )
+
+
+
+
+    def atr(self,h,l,c,n=14):
+
+        tr=[]
+
+
+        for i in range(1,len(c)):
+
+            value=max(
+                h[i]-l[i],
+                abs(h[i]-c[i-1]),
+                abs(l[i]-c[i-1])
+            )
+
+
+            tr.append(value)
+
+
+        if len(tr)<n:
+
+            return 0
+
+
+        return sum(tr[-n:])/n
+
+
+
+
+    def vwap(self,prices,volumes):
+
+        total=0
+        vol=0
+
+
+        for p,v in zip(prices,volumes):
+
+            total += p*v
+            vol += v
+
+
+        if vol == 0:
+
+            return prices[-1]
+
+
+        return total/vol
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\live_scanner.py ====================
+
+from app.services.scanner_engine import ScannerEngine
+from app.services.bybit_client import BybitClient
+
+
+class LiveScanner:
+
+
+    def __init__(self):
+
+        self.engine = ScannerEngine()
+        self.client = BybitClient()
+
+
+
+    def scan(self):
+
+        signals = []
+
+
+        try:
+
+            symbols = self.client.get_symbols()
+
+            print("=== LIVE РАДАР ===")
+            print("Монет:", len(symbols))
+
+
+            for symbol in symbols[:100]:
+
+                try:
+
+                    candles = self.client.get_candles(symbol)
+
+
+                    print(
+                        symbol,
+                        "свечи:",
+                        len(candles)
+                    )
+
+
+                    result = self.engine.scan_symbol(
+                        symbol,
+                        candles
+                    )
+
+
+                    print(
+                        "RESULT:",
+                        result
+                    )
+
+
+                    if result:
+
+                        if isinstance(result, list):
+
+                            signals.extend(result)
+
+                        else:
+
+                            signals.append(result)
+
+
+                except Exception as e:
+
+                    print(
+                        "Ошибка монеты:",
+                        symbol,
+                        e
+                    )
+
+
+
+            print(
+                "ИТОГО:",
+                len(signals)
+            )
+
+
+            signals = sorted(
+                signals,
+                key=lambda x:x.get("сила",0),
+                reverse=True
+            )
+
+
+            return {
+
+                "статус":"LIVE",
+
+                "время":"онлайн",
+
+                "топ_предсигналов":
+                signals[:10],
+
+                "топ_сделок":
+                signals[:10],
+
+                "всего_сигналов":
+                len(signals)
+
+            }
+
+
+
+        except Exception as e:
+
+
+            print(
+                "LIVE ERROR:",
+                e
+            )
+
+
+            return {
+
+                "статус":"ОШИБКА",
+
+                "время":"онлайн",
+
+                "топ_предсигналов":[],
+
+                "топ_сделок":[],
+
+                "всего_сигналов":0
+            }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\market_analyzer.py ====================
+
+from app.services.indicator_engine import IndicatorEngine
+from app.services.score_engine import ScoreEngine
+
+
+class MarketAnalyzer:
+
+
+    def __init__(self):
+
+        self.indicators = IndicatorEngine()
+        self.score = ScoreEngine()
+
+
+
+    def normalize_candles(self, candles):
+
+        result = []
+
+
+        for c in candles:
+
+            if isinstance(c, dict):
+
+                result.append(c)
+
+            elif isinstance(c, (list, tuple)):
+
+                result.append({
+
+                    "time": int(c[0]),
+
+                    "open": float(c[1]),
+
+                    "high": float(c[2]),
+
+                    "low": float(c[3]),
+
+                    "close": float(c[4]),
+
+                    "volume": float(c[5])
+
+                })
+
+
+        return result
+
+
+
+
+    def analyze(self, candles):
+
+        try:
+
+            candles = self.normalize_candles(candles)
+
+
+            print(
+                "АНАЛИЗ:",
+                len(candles)
+            )
+
+
+            if len(candles) < 20:
+
+                raise Exception(
+                    "Недостаточно свечей"
+                )
+
+
+
+            features = self.indicators.analyze(
+                candles
+            )
+
+
+            print(
+                "FEATURES:",
+                features
+            )
+
+
+
+            score, reasons = self.score.calculate(
+                features,
+                [],
+                0
+            )
+
+
+
+            if score >= 70:
+
+                signal = "LONG"
+
+
+            elif score <= 30:
+
+                signal = "SHORT"
+
+
+            else:
+
+                signal = "WAIT"
+
+
+
+            strategy = {
+
+                "signal": signal,
+
+                "score": score,
+
+                "reasons": reasons
+
+            }
+
+
+
+            structure = {
+
+                "trend":
+                    features.get(
+                        "trend",
+                        "UNKNOWN"
+                    ),
+
+                "rsi":
+                    features.get(
+                        "rsi",
+                        0
+                    )
+
+            }
+
+
+
+            ranking = {
+
+                "signal": signal,
+
+                "score": score,
+
+                "reasons": reasons
+
+            }
+
+
+
+            price = candles[-1]["close"]
+
+
+
+            entry = {
+
+                "price": price
+
+            }
+
+
+
+            trade_plan = {
+
+                "direction": signal,
+
+                "entry": entry,
+
+                "stop_loss": 0,
+
+                "take_profit": 0
+
+            }
+
+
+
+            return {
+
+                "features": features,
+
+                "strategy": strategy,
+
+                "structure": structure,
+
+                "ranking": ranking,
+
+                "entry": entry,
+
+                "trade_plan": trade_plan
+
+            }
+
+
+
+        except Exception as e:
+
+
+            print(
+                "MARKET ANALYZER ERROR:",
+                e
+            )
+
+
+            return {
+
+                "features": {},
+
+                "strategy": {
+                    "signal":"WAIT",
+                    "score":0,
+                    "reasons":[]
+                },
+
+                "structure": {
+                    "trend":"UNKNOWN",
+                    "rsi":0
+                },
+
+                "ranking": {
+                    "signal":"WAIT",
+                    "score":0,
+                    "reasons":[]
+                },
+
+                "entry": {},
+
+                "trade_plan": {}
+
+            }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\market_feed.py ====================
+
+import requests
+
+
+class MarketFeed:
+
+
+    def get_symbols(self):
+
+        url = (
+            "https://api.bybit.com/v5/market/tickers"
+            "?category=linear"
+        )
+
+        data = requests.get(url).json()
+
+        symbols = []
+
+        for item in data["result"]["list"]:
+
+            symbol = item["symbol"]
+
+            if symbol.endswith("USDT"):
+
+                symbols.append(symbol)
+
+
+        return symbols[:100]
+
+
+
+    def get_candles(
+        self,
+        symbol,
+        interval="15",
+        limit=200
+    ):
+
+
+        url = (
+
+            "https://api.bybit.com/v5/market/kline"
+
+            f"?category=linear"
+
+            f"&symbol={symbol}"
+
+            f"&interval={interval}"
+
+            f"&limit={limit}"
+
+        )
+
+
+        data = requests.get(url).json()
+
+
+        return data["result"]["list"]
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\pre_signal.py ====================
+
+from app.services.signal import Signal
+
+
+class PreSignal:
+
+
+    def __init__(self):
+
+        pass
+
+
+
+    def analyze(self, candles, symbol):
+
+
+        try:
+
+
+            if candles is None:
+
+                return None
+
+
+
+            if len(candles) < 50:
+
+                return None
+
+
+
+            closes = []
+
+            volumes = []
+
+
+
+            for c in candles:
+
+
+                if len(c) < 6:
+
+                    continue
+
+
+                closes.append(
+                    float(c[4])
+                )
+
+
+                volumes.append(
+                    float(c[5])
+                )
+
+
+
+            if len(closes) < 50:
+
+                return None
+
+
+
+
+            price = closes[-1]
+
+            old_price = closes[-20]
+
+
+
+            change = (
+
+                (price-old_price)
+
+                /
+
+                old_price
+
+                *
+
+                100
+
+            )
+
+
+
+
+            avg_volume = sum(
+
+                volumes[-20:]
+
+            ) / 20
+
+
+
+
+            volume_power = (
+
+                volumes[-1]
+
+                >
+
+                avg_volume * 1.3
+
+            )
+
+
+
+            # простой RSI
+
+
+            gains = []
+
+            losses = []
+
+
+
+            for i in range(
+
+                1,
+
+                len(closes)
+
+            ):
+
+
+                diff = closes[i] - closes[i-1]
+
+
+                if diff >= 0:
+
+                    gains.append(diff)
+
+                    losses.append(0)
+
+
+                else:
+
+                    gains.append(0)
+
+                    losses.append(abs(diff))
+
+
+
+
+
+            avg_gain = sum(
+
+                gains[-14:]
+
+            ) / 14
+
+
+
+            avg_loss = sum(
+
+                losses[-14:]
+
+            ) / 14
+
+
+
+
+            if avg_loss == 0:
+
+                rsi = 100
+
+
+            else:
+
+
+                rs = avg_gain / avg_loss
+
+
+                rsi = 100 - (
+
+                    100 /
+
+                    (1 + rs)
+
+                )
+
+
+
+
+
+            reasons = []
+
+            strength = 0
+
+
+
+            direction = None
+
+            strategy = ""
+
+
+
+
+
+            # Отскок после дампа
+
+
+            if change <= -1:
+
+
+                direction = "LONG"
+
+
+                strategy = (
+
+                    "Отскок после дампа"
+
+                )
+
+
+                strength += 30
+
+
+                reasons.append(
+
+                    "Цена упала более 1%"
+
+                )
+
+
+
+
+                if volume_power:
+
+
+                    strength += 20
+
+
+                    reasons.append(
+
+                        "Повышенный объём"
+
+                    )
+
+
+
+
+
+                if rsi < 40:
+
+
+                    strength += 20
+
+
+                    reasons.append(
+
+                        "RSI показывает перепроданность"
+
+                    )
+
+
+
+
+
+            # Отскок после пампа
+
+
+            if change >= 1:
+
+
+                direction = "SHORT"
+
+
+                strategy = (
+
+                    "Отскок после пампа"
+
+                )
+
+
+                strength += 30
+
+
+                reasons.append(
+
+                    "Цена выросла более 1%"
+
+                )
+
+
+
+
+                if volume_power:
+
+
+                    strength += 20
+
+
+                    reasons.append(
+
+                        "Высокий объём"
+
+                    )
+
+
+
+
+                if rsi > 60:
+
+
+                    strength += 20
+
+
+                    reasons.append(
+
+                        "RSI показывает перекупленность"
+
+                    )
+
+
+
+
+
+            if direction is None:
+
+                return None
+
+
+
+
+
+            entry = price
+
+
+
+            stop = (
+
+                price * 0.995
+
+                if direction=="LONG"
+
+                else
+
+                price * 1.005
+
+            )
+
+
+
+            target = (
+
+                price * 1.03
+
+                if direction=="LONG"
+
+                else
+
+                price * 0.97
+
+            )
+
+
+
+
+
+            return {
+
+
+                "монета":
+
+                symbol,
+
+
+                "направление":
+
+                direction,
+
+
+                "стратегия":
+
+                strategy,
+
+
+                "сила":
+
+                min(
+
+                    strength,
+
+                    100
+
+                ),
+
+
+                "причины":
+
+                reasons,
+
+
+                "вход":
+
+                round(
+
+                    entry,
+
+                    4
+
+                ),
+
+
+                "стоп":
+
+                round(
+
+                    stop,
+
+                    4
+
+                ),
+
+
+                "тейк":
+
+                round(
+
+                    target,
+
+                    4
+
+                ),
+
+
+                "доходность":
+
+                "3%"
+
+
+            }
+
+
+
+
+
+        except Exception as e:
+
+
+            print(
+
+                "PreSignal internal error",
+
+                symbol,
+
+                e
+
+            )
+
+
+            return None
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\public_market.py ====================
+
+import requests
+
+
+class PublicMarketData:
+
+
+    def __init__(self):
+
+        self.url = "https://api.bybit.com"
+
+
+    def get_candles(
+        self,
+        symbol="BTCUSDT",
+        interval="60",
+        limit=100
+    ):
+
+        response = requests.get(
+            self.url + "/v5/market/kline",
+            params={
+                "category":"linear",
+                "symbol":symbol,
+                "interval":interval,
+                "limit":limit
+            },
+            timeout=10
+        )
+
+
+        data = response.json()
+
+
+        candles = data["result"]["list"]
+
+
+        result = []
+
+
+        for c in candles[::-1]:
+
+            result.append(
+                {
+                    "time": int(c[0]),
+                    "open": float(c[1]),
+                    "high": float(c[2]),
+                    "low": float(c[3]),
+                    "close": float(c[4]),
+                    "volume": float(c[5])
+                }
+            )
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanner_engine.py ====================
+
+from app.services.bybit_client import BybitClient
+from app.services.market_analyzer import MarketAnalyzer
+
+
+SIGNALS = []
+
+
+class ScannerEngine:
+
+
+    def __init__(self):
+
+        self.client = BybitClient()
+        self.analyzer = MarketAnalyzer()
+
+
+    def scan_symbol(self, symbol, interval):
+
+        try:
+
+            candles = self.client.get_candles(
+                symbol,
+                interval,
+                200
+            )
+
+
+            if len(candles) < 50:
+                return None
+
+
+            result = self.analyzer.analyze(
+                candles
+            )
+
+
+            ranking = result.get(
+                "ranking",
+                {}
+            )
+
+
+            signal = ranking.get(
+                "signal",
+                "WAIT"
+            )
+
+
+            if signal == "WAIT":
+                return None
+
+
+
+            features = result.get(
+                "features",
+                {}
+            )
+
+
+            return {
+
+                "symbol": symbol,
+
+                "timeframe": interval,
+
+                "direction": signal,
+
+                "score": ranking.get(
+                    "score",
+                    0
+                ),
+
+                "price": candles[-1]["close"],
+
+                "rsi": features.get(
+                    "rsi",
+                    0
+                ),
+
+                "confidence": ranking.get(
+                    "score",
+                    0
+                ),
+
+                "stop": 0,
+
+                "reasons": ranking.get(
+                    "reasons",
+                    []
+                )
+
+            }
+
+
+        except Exception as e:
+
+            print(
+                "SCAN ERROR",
+                symbol,
+                interval,
+                e
+            )
+
+            return None
+
+
+
+
+
+def get_signals():
+
+
+    global SIGNALS
+
+
+    SIGNALS=[]
+
+
+    client = BybitClient()
+
+    engine = ScannerEngine()
+
+
+    symbols = client.get_symbols()
+
+
+    intervals = [
+        "5",
+        "15",
+        "60",
+        "240",
+        "D"
+    ]
+
+
+    print(
+        "МОНЕТ:",
+        len(symbols)
+    )
+
+
+    for symbol in symbols:
+
+
+        for interval in intervals:
+
+
+            result = engine.scan_symbol(
+                symbol,
+                interval
+            )
+
+
+            if result:
+
+                SIGNALS.append(
+                    result
+                )
+
+
+
+    SIGNALS.sort(
+        key=lambda x:x["score"],
+        reverse=True
+    )
+
+
+    print(
+        "СИГНАЛОВ:",
+        len(SIGNALS)
+    )
+
+
+    return SIGNALS[:50]
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanner_engine_backup.py ====================
+
+from app.services.bybit_client import BybitClient
+
+
+SIGNALS = []
+
+
+class ScannerEngine:
+
+    def __init__(self):
+
+        self.client = BybitClient()
+
+        try:
+            from app.services.indicator_engine import IndicatorEngine
+            self.indicator_engine = IndicatorEngine()
+        except Exception:
+            self.indicator_engine = None
+
+        try:
+            from app.services.strategy_engine import StrategyEngine
+            self.strategy_engine = StrategyEngine()
+        except Exception:
+            self.strategy_engine = None
+
+        try:
+            from app.services.trade_ranker import TradeRanker
+            self.ranker = TradeRanker()
+        except Exception:
+            self.ranker = None
+
+        try:
+            from app.services.entry_predictor import EntryPredictor
+            self.ai = EntryPredictor()
+        except Exception:
+            self.ai = None
+
+
+    def scan_symbol(self, symbol, candles):
+
+        try:
+
+            if len(candles) < 50:
+                return None
+
+
+            closes = []
+            volumes = []
+
+
+            for c in candles:
+
+                if isinstance(c, list):
+
+                    closes.append(float(c[4]))
+                    volumes.append(float(c[5]))
+
+                elif isinstance(c, dict):
+
+                    closes.append(float(c["close"]))
+                    volumes.append(float(c["volume"]))
+
+
+            price = closes[-1]
+
+
+            score = 0
+            reasons = []
+
+
+            features = {
+
+                "symbol": symbol,
+                "candles": candles,
+                "price": price,
+                "close": price,
+                "sma": (sum(closes[-20:]) / 20),
+                "high": max(closes[-20:]),
+                "low": min(closes[-20:]),
+                "closes": closes,
+                "volumes": volumes
+
+            }
+
+
+            # =====================
+            # INDICATORS
+            # =====================
+
+            gains = []
+            losses = []
+
+
+            for i in range(1,15):
+
+                diff = closes[-i] - closes[-i-1]
+
+                if diff >= 0:
+                    gains.append(diff)
+                else:
+                    losses.append(abs(diff))
+
+
+            avg_gain = sum(gains)/14 if gains else 0
+            avg_loss = sum(losses)/14 if losses else 1
+
+
+            rs = avg_gain / avg_loss
+
+
+            rsi = round(
+                100 - (100/(1+rs)),
+                2
+            )
+
+
+            avg_volume = (
+                sum(volumes[-20:])
+                /
+                20
+            )
+
+
+            volume_x = round(
+                volumes[-1] / avg_volume,
+                2
+            )
+
+
+            if rsi < 35:
+
+                score += 10
+
+                
+
+
+            if volume_x > 2:
+
+                score += 10
+
+                
+
+
+
+            # =====================
+            # PRICE ACTION
+            # =====================
+
+            high = max(closes[-20:])
+
+
+            drop = (
+                (high-price)
+                /
+                high
+                *
+                100
+            )
+
+
+            if drop > 5:
+
+                score += 10
+
+                
+
+
+            # =====================
+            # STRATEGIES
+            # =====================
+
+            strategy_result = None
+
+
+            if self.strategy_engine:
+
+                try:
+
+                    strategy_result = (
+                        self.strategy_engine.analyze(features)
+                    )
+
+
+                    if strategy_result:
+
+                        score += 20
+
+                        
+
+
+                except Exception as e:
+
+                    print(
+                        "Strategy error:",
+                        e
+                    )
+
+
+
+            # =====================
+            # AI
+            # =====================
+
+            ai_result = None
+
+
+            if self.ai:
+
+                try:
+
+                    ai_result = (
+                        self.ai.predict(features, strategy_result)
+                    )
+
+
+                    confidence = 0
+
+
+                    if isinstance(ai_result, dict):
+
+                        confidence = (
+                            ai_result.get(
+                                "confidence",
+                                0
+                            )
+                        )
+
+
+                    if confidence:
+
+                        score += int(
+                            confidence * 20
+                        )
+
+
+                        reasons.append(
+                            f"🤖 ИИ оценил вероятность входа: {confidence:.0%}"
+                        )
+
+
+                except Exception as e:
+
+                    print(
+                        "AI error:",
+                        e
+                    )
+
+
+
+            # =====================
+            # FINAL RANK
+            # =====================
+
+            if self.ranker:
+
+                try:
+
+                    score = self.ranker.rank(
+                        score,
+                        features,
+                        strategy_result,
+                        ai_result
+                    )
+
+                except Exception:
+
+                    pass
+
+
+
+            score = min(
+                score,
+                100
+            )
+
+
+            if score < 50:
+
+                return None
+
+
+
+            # =====================
+            # RISK
+            # =====================
+
+            stop = price * 0.985
+
+            take1 = price * 1.02
+
+            take2 = price * 1.04
+
+            take3 = price * 1.06
+
+
+
+            signal = {
+
+                "symbol": symbol,
+
+                "direction": "LONG",
+
+                "score": score,
+
+                "price": round(
+                    price,
+                    6
+                ),
+
+                "entry": round(
+                    price,
+                    6
+                ),
+
+                "stop": round(
+                    stop,
+                    6
+                ),
+
+                "take1": round(
+                    take1,
+                    6
+                ),
+
+                "take2": round(
+                    take2,
+                    6
+                ),
+
+                "take3": round(
+                    take3,
+                    6
+                ),
+
+                "rsi": rsi,
+
+                "volume_x": volume_x,
+
+                "indicators": features.get("indicators", {}),
+
+                "reasons": reasons
+
+            }
+
+
+            print(
+                "SIGNAL:",
+                signal
+            )
+
+
+            return signal
+
+
+
+        except Exception as e:
+
+            print(
+                "SCAN ERROR",
+                symbol,
+                e
+            )
+
+            return None
+
+
+
+
+def get_signals():
+
+    global SIGNALS
+
+
+    SIGNALS = []
+
+
+    client = BybitClient()
+
+
+    symbols = client.get_symbols()
+
+
+    engine = ScannerEngine()
+
+
+
+    print(
+        "Монет:",
+        len(symbols)
+    )
+
+
+    for symbol in symbols:
+
+        try:
+
+            candles = client.get_candles(
+                symbol
+            )
+
+
+            result = engine.scan_symbol(
+                symbol,
+                candles
+            )
+
+
+            if result:
+
+                SIGNALS.append(
+                    result
+                )
+
+
+        except Exception as e:
+
+            print(
+                symbol,
+                e
+            )
+
+
+
+    SIGNALS.sort(
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+
+    return SIGNALS[:10]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\score_engine.py ====================
+
+class ScoreEngine:
+
+
+    def calculate(self, features, structure=None, pattern=0):
+
+
+        score = 50
+
+        reasons = []
+
+
+
+        rsi = features.get("rsi",50)
+        macd = features.get("macd",0)
+        trend = features.get("trend","")
+        volume = features.get("volume_ratio",0)
+        momentum = features.get("momentum",0)
+        roc = features.get("roc",0)
+
+
+
+        # RSI
+
+        if rsi < 30:
+
+            score += 15
+            reasons.append(
+                "RSI oversold"
+            )
+
+        elif rsi > 70:
+
+            score -= 15
+            reasons.append(
+                "RSI overbought"
+            )
+
+
+
+        # MACD
+
+        if macd > 0:
+
+            score += 10
+            reasons.append(
+                "MACD bullish"
+            )
+
+        else:
+
+            score -= 10
+            reasons.append(
+                "MACD bearish"
+            )
+
+
+
+        # Trend
+
+        if trend == "BULLISH":
+
+            score += 15
+            reasons.append(
+                "EMA trend"
+            )
+
+        elif trend == "BEARISH":
+
+            score -= 15
+            reasons.append(
+                "EMA trend"
+            )
+
+
+
+        # Volume
+
+        if volume > 1.5:
+
+            score += 10
+            reasons.append(
+                "Volume spike"
+            )
+
+
+
+        # Momentum
+
+        if momentum > 0:
+
+            score += 10
+            reasons.append(
+                "Momentum"
+            )
+
+        else:
+
+            score -= 10
+            reasons.append(
+                "Momentum"
+            )
+
+
+
+        # ROC
+
+        if roc > 0:
+
+            score += 5
+
+        else:
+
+            score -= 5
+
+
+
+        # ограничение
+
+        score=max(
+            0,
+            min(
+                100,
+                score
+            )
+        )
+
+
+
+        if score >= 65:
+
+            signal="LONG"
+
+        elif score <=35:
+
+            signal="SHORT"
+
+        else:
+
+            signal="WAIT"
+
+
+
+        return score, reasons
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\signal.py ====================
+
+class Signal:
+
+
+    def __init__(
+        self,
+        symbol,
+        direction,
+        strength,
+        setup,
+        reasons,
+        entry=None,
+        stop=None,
+        target=None,
+        profit=None,
+        decision=None,
+        waiting=None
+    ):
+
+
+        self.symbol = symbol
+
+        self.direction = direction
+
+        self.strength = strength
+
+        self.setup = setup
+
+        self.reasons = reasons
+
+        self.entry = entry
+
+        self.stop = stop
+
+        self.target = target
+
+        self.profit = profit
+
+        self.decision = decision
+
+        self.waiting = waiting
+
+
+
+    def to_dict(self):
+
+
+        return {
+
+
+            "монета":
+            self.symbol,
+
+
+            "направление":
+            self.direction,
+
+
+            "стратегия":
+            self.setup,
+
+
+            "сила":
+            self.strength,
+
+
+            "причины":
+            self.reasons,
+
+
+            "вход":
+            self.entry,
+
+
+            "стоп":
+            self.stop,
+
+
+            "тейк":
+            self.target,
+
+
+            "прибыль":
+            self.profit,
+
+
+            "решение":
+            self.decision,
+
+
+            "ожидание":
+            self.waiting
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\signal_engine.py ====================
+
+from app.services.scanner_engine import ScannerEngine
+from app.services.entry_predictor import EntryPredictor
+
+
+class SignalEngine:
+
+
+    def __init__(self):
+
+        self.scanner = ScannerEngine()
+
+        self.predictor = EntryPredictor()
+
+
+
+    def analyze_symbol(self, symbol, candles):
+
+
+        signals = self.scanner.scan_symbol(
+            symbol,
+            candles
+        )
+
+
+        result = []
+
+
+        for signal in signals:
+
+
+            prediction = self.predictor.predict(
+
+                {
+                    "close": candles[-1][4],
+
+                    "closes": [
+                        float(c[4])
+                        for c in candles
+                    ],
+
+                    "volumes": [
+                        float(c[7])
+                        for c in candles
+                    ]
+
+                },
+
+                {
+
+                    "signal":
+                    signal["direction"]
+
+                }
+
+            )
+
+
+            signal["прогноз"] = prediction
+
+
+            # пропускаем только хорошие
+
+
+            if prediction["ожидаемый_профит"] >= 3:
+
+
+                result.append(signal)
+
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money_engine.py ====================
+
+class SmartMoneyEngine:
+
+
+    def liquidity_sweep(self, candles):
+
+        if len(candles) < 20:
+            return False
+
+
+        highs = [
+            float(c["high"])
+            for c in candles
+            if "high" in c
+        ]
+
+        lows = [
+            float(c["low"])
+            for c in candles
+            if "low" in c
+        ]
+
+
+        if not highs or not lows:
+            return False
+
+
+        last_high = highs[-1]
+        previous_high = max(highs[-10:-1])
+
+
+        last_low = lows[-1]
+        previous_low = min(lows[-10:-1])
+
+
+        if last_high > previous_high:
+            return True
+
+
+        if last_low < previous_low:
+            return True
+
+
+        return False
+
+
+
+    def equal_highs(self, candles):
+
+        if len(candles) < 10:
+            return False
+
+
+        highs = [
+            float(c["high"])
+            for c in candles[-10:]
+            if "high" in c
+        ]
+
+
+        if len(highs) < 5:
+            return False
+
+
+        return (
+            max(highs) - min(highs)
+        ) / max(highs) < 0.003
+
+
+
+    def equal_lows(self, candles):
+
+        if len(candles) < 10:
+            return False
+
+
+        lows = [
+            float(c["low"])
+            for c in candles[-10:]
+            if "low" in c
+        ]
+
+
+        if len(lows) < 5:
+            return False
+
+
+        return (
+            max(lows) - min(lows)
+        ) / min(lows) < 0.003
+
+
+
+    def fair_value_gap(self, candles):
+
+        if len(candles) < 3:
+            return False
+
+
+        c1 = candles[-3]
+        c3 = candles[-1]
+
+
+        if "high" not in c1:
+            return False
+
+
+        if "low" not in c3:
+            return False
+
+
+        return (
+            float(c3["low"])
+            >
+            float(c1["high"])
+        )
+
+
+
+    def analyze(self, candles):
+
+
+        score = 0
+        reasons = []
+
+
+        if self.liquidity_sweep(candles):
+
+            score += 25
+
+            reasons.append(
+                "Liquidity Sweep"
+            )
+
+
+
+        if self.equal_highs(candles):
+
+            score += 10
+
+            reasons.append(
+                "Equal Highs"
+            )
+
+
+
+        if self.equal_lows(candles):
+
+            score += 10
+
+            reasons.append(
+                "Equal Lows"
+            )
+
+
+
+        if self.fair_value_gap(candles):
+
+            score += 20
+
+            reasons.append(
+                "Fair Value Gap"
+            )
+
+
+
+        return {
+
+            "score": score,
+
+            "reasons": reasons
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategy.py ====================
+
+class Strategy:
+
+
+    def analyze(self, features):
+
+
+        close = features["close"]
+
+        sma = features["sma"]
+
+        rsi = features["rsi"]
+
+
+
+        trend = "BULLISH" if close > sma else "BEARISH"
+
+
+
+        if trend == "BULLISH" and rsi >= 45:
+
+            signal = "LONG"
+
+
+        elif trend == "BEARISH" and rsi <= 55:
+
+            signal = "SHORT"
+
+
+        else:
+
+            signal = "NO_TRADE"
+
+
+
+        momentum = "NEUTRAL"
+
+
+        return {
+
+
+            "trend":
+                trend,
+
+
+            "momentum":
+                momentum,
+
+
+            "signal":
+                signal
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategy_engine.py ====================
+
+from app.services.strategies.bounce import BounceStrategy
+from app.services.strategies.breakout import BreakoutStrategy
+from app.services.strategies.fake_breakout import FakeBreakoutStrategy
+from app.services.strategies.volume import VolumeStrategy
+from app.services.strategies.imbalance import ImbalanceStrategy
+from app.services.strategies.range_break import RangeBreakStrategy
+
+
+class StrategyEngine:
+
+    def __init__(self):
+
+        self.strategies = [
+            BounceStrategy(),
+            BreakoutStrategy(),
+            FakeBreakoutStrategy(),
+            VolumeStrategy(),
+            ImbalanceStrategy(),
+            RangeBreakStrategy()
+        ]
+
+
+    def analyze(self, features):
+
+        total_score = 0
+        signals = []
+        reasons = []
+        strategy_names = []
+
+
+        names = {
+
+            "BOUNCE":
+                "Отбой от уровня",
+
+            "BREAKOUT":
+                "Пробой ключевого уровня",
+
+            "FAKE_BREAKOUT":
+                "Ложный пробой с возвратом",
+
+            "RANGE_BREAK":
+                "Выход из зоны консолидации",
+
+            "IMBALANCE":
+                "Дисбаланс спроса и предложения",
+
+            "VOLUME":
+                "Объёмное подтверждение движения"
+        }
+
+
+        for strategy in self.strategies:
+
+            result = strategy.analyze(features)
+
+
+            if result.get("score", 0) > 0:
+
+                total_score += result["score"]
+
+
+                if result.get("strategy"):
+
+                    code = result["strategy"]
+
+                    strategy_names.append(
+                        names.get(code, code)
+                    )
+
+
+                for r in result.get("reasons", []):
+
+                    if "BREAK" in r:
+                        reasons.append(
+                            "Пробой важного уровня"
+                        )
+
+                    elif "VOLUME" in r:
+                        reasons.append(
+                            "Объём подтвердил движение"
+                        )
+
+                    elif "IMBALANCE" in r:
+                        reasons.append(
+                            "Сформирован дисбаланс покупателей и продавцов"
+                        )
+
+                    elif "RANGE" in r:
+                        reasons.append(
+                            "Цена вышла из зоны накопления"
+                        )
+
+                    elif "PRESSURE" in r:
+                        reasons.append(
+                            "Усиление давления участников рынка"
+                        )
+
+
+            if result.get("signal") not in [
+                "NONE",
+                "WAIT",
+                None
+            ]:
+
+                signals.append(
+                    result["signal"]
+                )
+
+
+        long_count = signals.count("LONG")
+        short_count = signals.count("SHORT")
+
+
+        if long_count > short_count:
+
+            final_signal = "LONG"
+
+        elif short_count > long_count:
+
+            final_signal = "SHORT"
+
+        else:
+
+            final_signal = "WAIT"
+
+
+
+        unique_strategies = list(set(strategy_names))
+
+
+        return {
+
+            "signal":
+                final_signal,
+
+            "score":
+                min(total_score, 100),
+
+            "strategy_name":
+                ", ".join(unique_strategies)
+                if unique_strategies
+                else "Комплексный сигнал",
+
+            "strategies":
+                unique_strategies,
+
+            "reasons":
+                list(set(reasons))
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\terminal_view.py ====================
+
+class TerminalView:
+
+
+    def show_signals(self, signals):
+
+
+        print()
+
+        print("================================")
+
+        print("     TOP-10 БУДУЩИХ СДЕЛОК")
+
+        print("================================")
+
+
+        if not signals:
+
+            print()
+
+            print("Сигналов нет")
+
+            return
+
+
+
+        for index, signal in enumerate(
+            signals,
+            start=1
+        ):
+
+
+            print()
+
+            print(
+                f"#{index} {signal.get('монета')}"
+            )
+
+
+            print(
+                "Направление:",
+                signal.get("направление")
+            )
+
+
+            print(
+                "Стратегия:",
+                signal.get("стратегия")
+            )
+
+
+            print(
+                "Сила:",
+                signal.get("итоговая_оценка"),
+                "/100"
+            )
+
+
+            print(
+                "Потенциал:",
+                signal.get("ожидаемый_профит"),
+                "%"
+            )
+
+
+            print()
+
+            print("Почему:")
+
+
+            for reason in signal.get(
+                "причины",
+                []
+            ):
+
+                print(
+                    "✓",
+                    reason
+                )
+
+
+            print()
+
+            print(
+                "Статус:",
+                signal.get(
+                    "статус",
+                    "НАБЛЮДЕНИЕ"
+                )
+            )
+
+            print("--------------------------------")
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\trade_executor.py ====================
+
+class TradeExecutor:
+
+
+    def __init__(self):
+        self.status = "READY"
+
+
+
+    def prepare(
+        self,
+        trade_plan
+    ):
+
+        if not trade_plan:
+
+            return {
+
+                "status":
+                    "NO_TRADE",
+
+                "message":
+                    "Trade plan missing"
+
+            }
+
+
+
+        side = trade_plan.get(
+            "side"
+        )
+
+
+        if side not in [
+            "LONG",
+            "SHORT"
+        ]:
+
+            return {
+
+                "status":
+                    "INVALID",
+
+                "message":
+                    "Invalid trade side"
+
+            }
+
+
+
+        execution = {
+
+
+            "status":
+                "READY",
+
+
+            "side":
+                side,
+
+
+            "entry":
+                trade_plan.get(
+                    "entry"
+                ),
+
+
+            "stop_loss":
+                trade_plan.get(
+                    "stop_loss"
+                ),
+
+
+            "take_profit":
+                trade_plan.get(
+                    "take_profit"
+                ),
+
+
+            "position_size":
+                trade_plan.get(
+                    "position_size"
+                ),
+
+
+            "risk_reward":
+                trade_plan.get(
+                    "risk_reward"
+                ),
+
+
+            "mode":
+                "SIMULATION"
+
+        }
+
+
+        return execution
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\trade_ranker.py ====================
+
+class TradeRanker:
+
+
+    def __init__(self):
+
+        pass
+
+
+
+    def calculate_strength(self, data):
+
+
+        score = 0
+
+        reasons = []
+
+
+
+        trend = data.get(
+            "trend",
+            ""
+        )
+
+
+        rsi = data.get(
+            "rsi",
+            50
+        )
+
+
+        volume = data.get(
+            "volume_power",
+            False
+        )
+
+
+        liquidity = data.get(
+            "liquidity",
+            False
+        )
+
+
+        setup = data.get(
+            "strategy",
+            ""
+        )
+
+
+
+        if trend in [
+            "STRONG_BULLISH",
+            "BULLISH"
+        ]:
+
+            score += 15
+
+            reasons.append(
+                "Тренд подтверждает LONG"
+            )
+
+
+
+        if trend in [
+            "STRONG_BEARISH",
+            "BEARISH"
+        ]:
+
+            score += 15
+
+            reasons.append(
+                "Тренд подтверждает SHORT"
+            )
+
+
+
+        if rsi < 35:
+
+
+            score += 15
+
+            reasons.append(
+                "RSI перепроданность"
+            )
+
+
+
+        if rsi > 65:
+
+
+            score += 15
+
+            reasons.append(
+                "RSI перекупленность"
+            )
+
+
+
+        if volume:
+
+
+            score += 20
+
+            reasons.append(
+                "Объём выше нормы"
+            )
+
+
+
+        if liquidity:
+
+
+            score += 20
+
+            reasons.append(
+                "Снятие ликвидности"
+            )
+
+
+
+        return {
+
+            "сила":
+
+            min(
+                score,
+                100
+            ),
+
+
+            "причины":
+
+            reasons
+
+        }
+
+
+
+
+
+    def rank(self, trades):
+
+
+        result = []
+
+
+
+        for trade in trades:
+
+
+            analysis = self.calculate_strength(
+                trade
+            )
+
+
+            trade.update(
+                analysis
+            )
+
+
+            result.append(
+                trade
+            )
+
+
+
+        result.sort(
+
+            key=lambda x:
+
+            x.get(
+                "сила",
+                0
+            ),
+
+            reverse=True
+
+        )
+
+
+        return result[:10]
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\bybit\client.py ====================
+
+from pybit.unified_trading import HTTP
+
+from app.core.security.secrets import BYBIT_API_KEY, BYBIT_API_SECRET
+
+
+class BybitClient:
+    def __init__(self):
+        self.session = HTTP(
+            testnet=True,
+            api_key=BYBIT_API_KEY,
+            api_secret=BYBIT_API_SECRET,
+        )
+
+    def get_status(self):
+        return "Bybit API client ready"
+
+    def get_server_time(self):
+        return self.session.get_server_time()
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\bybit\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\exchange\bybit_client.py ====================
+
+from app.config.settings import TRADING_MODE
+
+
+class BybitClient:
+
+
+    def __init__(self):
+
+        self.mode = TRADING_MODE
+
+
+    def create_order(
+        self,
+        symbol,
+        side,
+        qty,
+        price=None
+    ):
+
+        if self.mode != "LIVE":
+
+            return {
+
+                "exchange": "BYBIT",
+
+                "mode": self.mode,
+
+                "status": "SIMULATED_ORDER",
+
+                "symbol": symbol,
+
+                "side": side,
+
+                "qty": qty,
+
+                "price": price
+
+            }
+
+
+        raise Exception(
+            "LIVE MODE DISABLED. API KEYS REQUIRED."
+        )
+
+
+    def set_stop_take(
+        self,
+        symbol,
+        stop_loss,
+        take_profit
+    ):
+
+        return {
+
+            "status":
+                "SIMULATED_STOP_TAKE",
+
+            "stop_loss":
+                stop_loss,
+
+            "take_profit":
+                take_profit
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\exchange\executor.py ====================
+
+from app.services.exchange.bybit_client import BybitClient
+
+
+class BybitExecutor:
+
+
+    def __init__(self):
+
+        self.client = BybitClient()
+
+
+
+    def execute_trade(
+        self,
+        trade
+    ):
+
+        order = self.client.create_order(
+
+            symbol=trade["symbol"],
+
+            side=
+                "Buy"
+                if trade["side"] == "LONG"
+                else "Sell",
+
+            qty=trade["qty"],
+
+            price=trade["price"]
+
+        )
+
+
+        self.client.set_stop_take(
+
+            symbol=trade["symbol"],
+
+            stop_loss=trade["stop_loss"],
+
+            take_profit=trade["take_profit"]
+
+        )
+
+
+        return order
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\exchange\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\features\builder.py ====================
+
+from app.services.indicators.basic import (
+    sma,
+    ema,
+    rsi,
+    atr,
+)
+
+
+class FeatureBuilder:
+
+
+    def build(self, candles):
+
+        closes = [
+            candle[7]
+            for candle in candles
+        ]
+
+        highs = [
+            candle[5]
+            for candle in candles
+        ]
+
+        lows = [
+            candle[6]
+            for candle in candles
+        ]
+
+        volumes = [
+            candle[8]
+            for candle in candles
+        ]
+
+
+        return {
+            "close": closes[-1],
+            "volume": volumes[-1],
+
+            "sma": sma(closes),
+
+            "ema": ema(closes),
+
+            "rsi": rsi(closes),
+
+            "atr": atr(
+                highs,
+                lows,
+                closes,
+            ),
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\features\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\historical\collector.py ====================
+
+from app.services.market_data.candles import CandleDataEngine
+from app.services.market_data.parser import parse_candles
+from app.services.historical.database import HistoricalDatabase
+
+
+class HistoricalCollector:
+
+    def __init__(self):
+        self.market = CandleDataEngine()
+        self.database = HistoricalDatabase()
+
+
+    def collect(self, symbol="BTCUSDT", interval="60", limit=200):
+
+        response = self.market.get_candles(
+            symbol=symbol,
+            interval=interval,
+            limit=limit,
+        )
+
+        candles = parse_candles(
+            response["result"]["list"]
+        )
+
+        for candle in candles:
+            self.database.save_candle(
+                symbol,
+                interval,
+                candle
+            )
+
+        return len(candles)
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\historical\database.py ====================
+
+import sqlite3
+
+
+class HistoricalDatabase:
+
+    def __init__(self, path="market_history.db"):
+        self.connection = sqlite3.connect(path)
+
+        self.create_tables()
+
+
+    def create_tables(self):
+        cursor = self.connection.cursor()
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS candles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            interval TEXT NOT NULL,
+            timestamp INTEGER NOT NULL,
+            open REAL,
+            high REAL,
+            low REAL,
+            close REAL,
+            volume REAL,
+            turnover REAL,
+            UNIQUE(symbol, interval, timestamp)
+        )
+        """)
+
+        self.connection.commit()
+
+
+    def save_candle(self, symbol, interval, candle):
+
+        cursor = self.connection.cursor()
+
+        cursor.execute("""
+        INSERT OR IGNORE INTO candles (
+            symbol,
+            interval,
+            timestamp,
+            open,
+            high,
+            low,
+            close,
+            volume,
+            turnover
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            symbol,
+            interval,
+            candle["time"],
+            candle["open"],
+            candle["high"],
+            candle["low"],
+            candle["close"],
+            candle["volume"],
+            candle["turnover"],
+        ))
+
+        self.connection.commit()
+
+
+    def get_candles(self, symbol, interval, limit=100):
+
+        cursor = self.connection.cursor()
+
+        cursor.execute("""
+        SELECT *
+        FROM candles
+        WHERE symbol=? AND interval=?
+        ORDER BY timestamp DESC
+        LIMIT ?
+        """, (
+            symbol,
+            interval,
+            limit,
+        ))
+
+        return cursor.fetchall()
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\historical\loader.py ====================
+
+from app.core.market_config import (
+    SYMBOLS,
+    INTERVALS,
+    DEFAULT_HISTORY_LIMIT,
+)
+
+from app.services.historical.collector import HistoricalCollector
+
+
+class HistoricalLoader:
+
+    def __init__(self):
+        self.collector = HistoricalCollector()
+
+
+    def load_market_history(self):
+
+        total = 0
+
+        for symbol in SYMBOLS:
+
+            for interval in INTERVALS:
+
+                print(
+                    f"Loading {symbol} {interval}"
+                )
+
+                count = self.collector.collect(
+                    symbol=symbol,
+                    interval=interval,
+                    limit=DEFAULT_HISTORY_LIMIT,
+                )
+
+                total += count
+
+                print(
+                    f"Saved {count} candles"
+                )
+
+
+        return total
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\historical\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\indicators\basic.py ====================
+
+def sma(values, period=14):
+    if len(values) < period:
+        return None
+
+    return sum(values[-period:]) / period
+
+
+
+def ema(values, period=14):
+
+    if len(values) < period:
+        return None
+
+    multiplier = 2 / (period + 1)
+
+    ema_value = sum(values[:period]) / period
+
+    for price in values[period:]:
+        ema_value = (
+            (price - ema_value) * multiplier
+            + ema_value
+        )
+
+    return ema_value
+
+
+
+def rsi(values, period=14):
+
+    if len(values) <= period:
+        return None
+
+    gains = []
+    losses = []
+
+    for i in range(1, len(values)):
+        change = values[i] - values[i - 1]
+
+        if change > 0:
+            gains.append(change)
+            losses.append(0)
+
+        else:
+            gains.append(0)
+            losses.append(abs(change))
+
+
+    avg_gain = sum(gains[-period:]) / period
+    avg_loss = sum(losses[-period:]) / period
+
+
+    if avg_loss == 0:
+        return 100
+
+
+    rs = avg_gain / avg_loss
+
+    return 100 - (100 / (1 + rs))
+
+
+
+def atr(highs, lows, closes, period=14):
+
+    if len(closes) <= period:
+        return None
+
+
+    true_ranges = []
+
+
+    for i in range(1, len(closes)):
+
+        tr = max(
+            highs[i] - lows[i],
+            abs(highs[i] - closes[i-1]),
+            abs(lows[i] - closes[i-1]),
+        )
+
+        true_ranges.append(tr)
+
+
+    return sum(true_ranges[-period:]) / period
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\indicators\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\market\bybit_public.py ====================
+
+import requests
+
+
+class BybitPublic:
+
+
+    def __init__(self):
+
+        self.url = "https://api.bybit.com/v5/market/kline"
+
+
+
+    def get_candles(
+        self,
+        symbol="BTCUSDT",
+        interval="60",
+        limit=100
+    ):
+
+
+        params = {
+
+            "category": "linear",
+
+            "symbol": symbol,
+
+            "interval": interval,
+
+            "limit": limit
+
+        }
+
+
+        data = requests.get(
+            self.url,
+            params=params,
+            timeout=10
+        ).json()
+
+
+        candles = []
+
+
+        for item in data["result"]["list"]:
+
+
+            candles.append([
+
+                int(item[0]),      # time
+
+                float(item[1]),    # open
+
+                float(item[2]),    # high
+
+                float(item[3]),    # low
+
+                float(item[4]),    # close
+
+                0,                 # placeholder
+
+                0,                 # placeholder
+
+                float(item[5])     # volume
+
+            ])
+
+
+        return candles[::-1]
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\market_data\candles.py ====================
+
+from app.services.bybit.client import BybitClient
+
+
+class CandleDataEngine:
+    def __init__(self):
+        self.client = BybitClient()
+
+    def get_candles(self, symbol="BTCUSDT", interval="60", limit=200):
+        response = self.client.session.get_kline(
+            category="linear",
+            symbol=symbol,
+            interval=interval,
+            limit=limit,
+        )
+
+        return response
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\market_data\parser.py ====================
+
+def parse_candle(candle):
+    return {
+        "time": int(candle[0]),
+        "open": float(candle[1]),
+        "high": float(candle[2]),
+        "low": float(candle[3]),
+        "close": float(candle[4]),
+        "volume": float(candle[5]),
+        "turnover": float(candle[6]),
+    }
+
+
+def parse_candles(candles):
+    return [parse_candle(candle) for candle in candles]
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\market_data\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\paper\engine.py ====================
+
+import json
+import os
+
+class PaperTradingEngine:
+
+    def __init__(self):
+
+        self.account_file = "app/data/account.json"
+
+        if not os.path.exists(self.account_file):
+
+            self.save({
+                "mode":"PAPER",
+                "balance":10000,
+                "position":None
+            })
+
+
+    def load(self):
+
+        with open(self.account_file,"r",encoding="utf-8-sig") as f:
+            return json.load(f)
+
+
+    def save(self,data):
+
+        with open(self.account_file,"w",encoding="utf-8") as f:
+            json.dump(data,f,indent=4)
+
+
+    def open_position(self,trade):
+
+        account=self.load()
+
+        account["position"]={
+
+            "side":trade["side"],
+            "qty":trade["qty"],
+            "entry":trade["price"],
+            "stop_loss":trade["stop_loss"],
+            "take_profit":trade["take_profit"],
+            "time":trade.get("time",""),
+            "status":"OPEN"
+
+        }
+
+        self.save(account)
+
+        return account["position"]
+
+
+    def close_position(self):
+
+        account=self.load()
+
+        account["position"]=None
+
+        self.save(account)
+
+
+    def check_position(self,price):
+
+        account=self.load()
+
+        position=account.get("position")
+
+        if position is None:
+
+            return {
+                "status":"NONE"
+            }
+
+        side=position["side"]
+
+        if side=="LONG":
+
+            if price<=position["stop_loss"]:
+
+                self.close_position()
+
+                return {"status":"STOP"}
+
+            if price>=position["take_profit"]:
+
+                self.close_position()
+
+                return {"status":"TAKE"}
+
+        if side=="SHORT":
+
+            if price>=position["stop_loss"]:
+
+                self.close_position()
+
+                return {"status":"STOP"}
+
+            if price<=position["take_profit"]:
+
+                self.close_position()
+
+                return {"status":"TAKE"}
+
+        return {
+            "status":"OPEN",
+            "position":position,
+            "current_price":price
+        }
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\paper\monitor.py ====================
+
+from app.services.paper.engine import PaperTradingEngine
+
+
+class PositionMonitor:
+
+
+    def __init__(self):
+
+        self.engine = PaperTradingEngine()
+
+
+
+    def check(self, price):
+
+        result = self.engine.check_position(
+            price
+        )
+
+
+        if result["status"] == "CLOSED":
+
+            print()
+
+            print("=== POSITION CLOSED ===")
+
+            print(result)
+
+
+        elif result["status"] == "OPEN":
+
+            print()
+
+            print("=== POSITION ACTIVE ===")
+
+            print(result)
+
+
+        else:
+
+            print("NO OPEN POSITION")
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\paper\stats.py ====================
+
+from pathlib import Path
+import csv
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+TRADES_FILE = BASE_DIR / "data" / "trades.csv"
+
+
+
+class PaperStats:
+
+
+    def report(self):
+
+
+        if not TRADES_FILE.exists():
+
+            return {
+                "trades":0,
+                "wins":0,
+                "losses":0,
+                "winrate":0,
+                "profit":0
+            }
+
+
+
+        trades = 0
+        wins = 0
+        losses = 0
+        profit = 0
+
+
+
+        with open(
+            TRADES_FILE,
+            encoding="utf-8"
+        ) as f:
+
+
+            reader = csv.reader(f)
+
+
+            for row in reader:
+
+
+                if len(row) < 6:
+
+                    continue
+
+
+
+                trades += 1
+
+
+                pnl = float(
+                    row[4]
+                )
+
+
+                profit += pnl
+
+
+
+                if pnl > 0:
+
+                    wins += 1
+
+                else:
+
+                    losses += 1
+
+
+
+        winrate = 0
+
+
+        if trades:
+
+            winrate = round(
+                wins / trades * 100,
+                2
+            )
+
+
+
+        return {
+
+            "trades":
+                trades,
+
+            "wins":
+                wins,
+
+            "losses":
+                losses,
+
+            "winrate":
+                winrate,
+
+            "profit":
+                round(
+                    profit,
+                    2
+                )
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\paper\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\ranking\scorer.py ====================
+
+class SignalScorer:
+
+
+    def score(self, features, analysis):
+
+        score = 0
+        reasons = []
+        warnings = []
+
+
+        # Trend
+
+        if analysis["trend"] == "BULLISH":
+
+            score += 30
+
+            reasons.append(
+                "Bullish trend"
+            )
+
+
+        elif analysis["trend"] == "BEARISH":
+
+            score += 30
+
+            reasons.append(
+                "Bearish trend"
+            )
+
+
+        else:
+
+            warnings.append(
+                "No clear trend"
+            )
+
+
+
+        # RSI
+
+        rsi = features["rsi"]
+
+
+        if 40 <= rsi <= 60:
+
+            score += 20
+
+            reasons.append(
+                "Healthy RSI"
+            )
+
+
+        elif rsi < 30:
+
+            warnings.append(
+                "Oversold"
+            )
+
+
+        elif rsi > 70:
+
+            warnings.append(
+                "Overbought"
+            )
+
+
+
+        # ATR volatility
+
+        atr = features["atr"]
+
+
+        if atr:
+
+            score += 20
+
+            reasons.append(
+                "Volatility available"
+            )
+
+
+
+        # Volume
+
+        if features["volume"] > 0:
+
+            score += 10
+
+            reasons.append(
+                "Volume data available"
+            )
+
+
+
+        return {
+
+            "score": min(score, 100),
+
+            "signal": analysis["signal"],
+
+            "reasons": reasons,
+
+            "warnings": warnings,
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\ranking\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\risk\manager.py ====================
+
+class RiskManager:
+
+
+    def __init__(
+        self,
+        balance=1000,
+        risk_percent=1
+    ):
+
+        self.balance = balance
+        self.risk_percent = risk_percent
+
+
+
+    def calculate(
+        self,
+        entry,
+        stop_loss,
+        take_profit,
+        side
+    ):
+
+
+        risk_amount = (
+            self.balance *
+            self.risk_percent /
+            100
+        )
+
+
+        distance = abs(
+            entry - stop_loss
+        )
+
+
+        if distance == 0:
+
+            return {
+                "error": "Invalid stop distance"
+            }
+
+
+
+        position_size = (
+            risk_amount /
+            distance
+        )
+
+
+        reward = abs(
+            take_profit - entry
+        )
+
+
+        risk_reward = (
+            reward /
+            distance
+        )
+
+
+
+        return {
+
+            "side": side,
+
+            "entry": round(
+                entry,
+                2
+            ),
+
+            "stop_loss": round(
+                stop_loss,
+                2
+            ),
+
+            "take_profit": round(
+                take_profit,
+                2
+            ),
+
+            "account_balance":
+                self.balance,
+
+            "risk_percent":
+                self.risk_percent,
+
+            "risk_amount": round(
+                risk_amount,
+                2
+            ),
+
+            "position_size": round(
+                position_size,
+                6
+            ),
+
+            "risk_reward": round(
+                risk_reward,
+                2
+            ),
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\risk\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\breakout_scanner.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\dump_scanner.py ====================
+
+from app.services.signal import Signal
+
+
+class DumpScanner:
+
+
+    def scan(self, symbol, candles):
+
+        try:
+
+            if len(candles) < 30:
+                return None
+
+
+
+            closes = [
+                float(c[4])
+                for c in candles
+            ]
+
+
+            volumes = [
+                float(c[5])
+                for c in candles
+            ]
+
+
+
+            price = closes[-1]
+
+
+            old_price = closes[-25]
+
+
+
+            change = (
+
+                (price - old_price)
+                /
+                old_price
+                *
+                100
+
+            )
+
+
+
+            avg_volume = (
+
+                sum(volumes[-25:])
+                /
+                25
+
+            )
+
+
+
+            volume_power = (
+
+                volumes[-1]
+                /
+                avg_volume
+                if avg_volume > 0
+                else 0
+
+            )
+
+
+
+            strength = 0
+
+
+            reasons = []
+
+
+
+            if change <= -3:
+
+
+                strength += 30
+
+
+                reasons.append(
+                    "Падение более 3%"
+                )
+
+
+
+            if volume_power >= 1.5:
+
+
+                strength += 25
+
+
+                reasons.append(
+                    "Высокий объём капитуляции"
+                )
+
+
+
+            if closes[-1] > closes[-2]:
+
+
+                strength += 20
+
+
+                reasons.append(
+                    "Появился покупатель после падения"
+                )
+
+
+
+            if strength < 60:
+
+                return None
+
+
+
+
+            entry = price
+
+
+            stop = price * 0.985
+
+
+            target = price * 1.03
+
+
+
+
+            return Signal(
+
+
+                symbol=symbol,
+
+
+                direction="LONG",
+
+
+
+                strength=min(
+                    strength,
+                    100
+                ),
+
+
+
+                setup=
+                "Снайпер: капитуляция + отскок после дампа",
+
+
+
+                reasons=reasons,
+
+
+
+                entry=round(
+                    entry,
+                    8
+                ),
+
+
+
+                stop=round(
+                    stop,
+                    8
+                ),
+
+
+
+                target=round(
+                    target,
+                    8
+                ),
+
+
+
+                profit="3%",
+
+
+
+                decision=
+                "МОЖНО ГОТОВИТЬ ВХОД"
+                if strength >= 75
+                else
+                "НАБЛЮДАТЬ",
+
+
+
+                waiting=
+                "15-25 минут"
+
+            )
+
+
+        except Exception:
+
+            return None
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\fake_breakout.py ====================
+
+from app.services.signal import Signal
+
+
+class FakeBreakoutScanner:
+
+
+    def scan(self, symbol, candles):
+
+
+        if len(candles) < 30:
+
+            return None
+
+
+
+        highs = [
+
+            float(c[2])
+
+            for c in candles
+
+        ]
+
+
+        lows = [
+
+            float(c[3])
+
+            for c in candles
+
+        ]
+
+
+        closes = [
+
+            float(c[4])
+
+            for c in candles
+
+        ]
+
+
+
+        current = closes[-1]
+
+
+
+        resistance = max(
+            highs[-20:-1]
+        )
+
+
+        support = min(
+            lows[-20:-1]
+        )
+
+
+
+        last_high = highs[-1]
+
+        last_low = lows[-1]
+
+
+
+        # Ложный пробой вверх
+
+
+        if last_high > resistance and current < resistance:
+
+
+            return Signal(
+
+                symbol=symbol,
+
+                direction="SHORT",
+
+                strength=82,
+
+                setup="FAKE BREAKOUT ВВЕРХ",
+
+                reasons=[
+
+                    "Пробит максимум",
+
+                    "Цена вернулась под уровень",
+
+                    "Возможная ловушка покупателей",
+
+                    "Вероятный разворот вниз"
+
+                ],
+
+                entry=current,
+
+                stop=last_high,
+
+                target=support
+
+            )
+
+
+
+        # Ложный пробой вниз
+
+
+        if last_low < support and current > support:
+
+
+            return Signal(
+
+                symbol=symbol,
+
+                direction="LONG",
+
+                strength=82,
+
+                setup="FAKE BREAKOUT ВНИЗ",
+
+                reasons=[
+
+                    "Пробита поддержка",
+
+                    "Цена вернулась выше уровня",
+
+                    "Возможная ловушка продавцов",
+
+                    "Вероятный разворот вверх"
+
+                ],
+
+                entry=current,
+
+                stop=last_low,
+
+                target=resistance
+
+            )
+
+
+
+        return None
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\imbalance_scanner.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\liquidity_scanner.py ====================
+
+from app.services.signal import Signal
+
+
+class LiquidityScanner:
+
+
+    def scan(self, symbol, candles):
+
+
+        if len(candles) < 30:
+
+            return None
+
+
+
+        highs = [
+            float(c[2])
+            for c in candles
+        ]
+
+
+        lows = [
+            float(c[3])
+            for c in candles
+        ]
+
+
+        closes = [
+            float(c[4])
+            for c in candles
+        ]
+
+
+
+        current = closes[-1]
+
+
+
+        previous_high = max(
+            highs[-20:-1]
+        )
+
+
+        previous_low = min(
+            lows[-20:-1]
+        )
+
+
+
+        last_high = highs[-1]
+
+        last_low = lows[-1]
+
+
+
+        # снятие ликвидности сверху
+
+        if last_high > previous_high and current < previous_high:
+
+
+            return Signal(
+
+                symbol=symbol,
+
+                direction="SHORT",
+
+                strength=85,
+
+                setup="LIQUIDITY SWEEP ВВЕРХ",
+
+                reasons=[
+
+                    "Снят верхний пул ликвидности",
+
+                    "Стопы покупателей собраны",
+
+                    "Цена вернулась под уровень",
+
+                    "Вероятный разворот вниз"
+
+                ],
+
+                entry=current,
+
+                stop=last_high,
+
+                target=previous_low
+
+            )
+
+
+
+
+        # снятие ликвидности снизу
+
+
+        if last_low < previous_low and current > previous_low:
+
+
+            return Signal(
+
+                symbol=symbol,
+
+                direction="LONG",
+
+                strength=85,
+
+                setup="LIQUIDITY SWEEP ВНИЗ",
+
+                reasons=[
+
+                    "Снят нижний пул ликвидности",
+
+                    "Стопы продавцов собраны",
+
+                    "Цена вернулась выше уровня",
+
+                    "Вероятный разворот вверх"
+
+                ],
+
+                entry=current,
+
+                stop=last_low,
+
+                target=previous_high
+
+            )
+
+
+        return None
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\pump_scanner.py ====================
+
+from app.services.signal import Signal
+
+
+class PumpScanner:
+
+
+    def scan(self, symbol, candles):
+
+        try:
+
+            if len(candles) < 30:
+                return None
+
+
+            closes = [
+                float(c[4])
+                for c in candles
+            ]
+
+
+            volumes = [
+                float(c[5])
+                for c in candles
+            ]
+
+
+            price = closes[-1]
+
+            old_price = closes[-25]
+
+
+            change = (
+                (price - old_price)
+                /
+                old_price
+                *
+                100
+            )
+
+
+            avg_volume = (
+                sum(volumes[-25:])
+                /
+                25
+            )
+
+
+            volume_power = (
+                volumes[-1]
+                /
+                avg_volume
+                if avg_volume > 0
+                else 0
+            )
+
+
+            strength = 0
+
+            reasons = []
+
+
+            if change >= 3:
+
+                strength += 30
+
+                reasons.append(
+                    "Рост более 3%"
+                )
+
+
+            if volume_power >= 1.5:
+
+                strength += 25
+
+                reasons.append(
+                    "Повышенный объём"
+                )
+
+
+            if closes[-1] < closes[-2]:
+
+                strength += 20
+
+                reasons.append(
+                    "Появился продавец после пампа"
+                )
+
+
+            if strength < 60:
+
+                return None
+
+
+
+            entry = price
+
+            stop = price * 1.015
+
+            target = price * 0.97
+
+
+
+            return Signal(
+
+                symbol=symbol,
+
+                direction="SHORT",
+
+                strength=min(
+                    strength,
+                    100
+                ),
+
+                setup=
+                "Снайпер: отскок после пампа",
+
+                reasons=reasons,
+
+                entry=round(
+                    entry,
+                    8
+                ),
+
+                stop=round(
+                    stop,
+                    8
+                ),
+
+                target=round(
+                    target,
+                    8
+                ),
+
+                profit="3%",
+
+                decision=
+                "МОЖНО ГОТОВИТЬ ВХОД"
+                if strength >= 75
+                else
+                "НАБЛЮДАТЬ",
+
+                waiting=
+                "15-25 минут"
+
+            )
+
+
+        except Exception:
+
+            return None
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\range_scanner.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\scanners\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\simulation\engine.py ====================
+
+from app.services.simulation.paper_trader import PaperTrader
+
+
+trader = PaperTrader()
+
+
+def simulate_trade(trade):
+
+    position = trader.open_trade(
+
+        side=trade["side"],
+
+        qty=trade["qty"],
+
+        entry=trade["price"],
+
+        stop_loss=trade["stop_loss"],
+
+        take_profit=trade["take_profit"]
+
+    )
+
+
+    print()
+
+    print("=== PAPER TRADE OPENED ===")
+
+    print(position)
+
+
+
+    return trader
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\simulation\paper_trader.py ====================
+
+from datetime import datetime
+
+
+class PaperTrader:
+
+
+    def __init__(self):
+
+        self.balance = 1000
+
+        self.position = None
+
+        self.history = []
+
+
+
+    def open_trade(
+        self,
+        side,
+        qty,
+        entry,
+        stop_loss,
+        take_profit
+    ):
+
+
+        self.position = {
+
+            "side": side,
+
+            "qty": qty,
+
+            "entry": entry,
+
+            "stop_loss": stop_loss,
+
+            "take_profit": take_profit,
+
+            "time":
+                datetime.now().isoformat()
+
+        }
+
+
+        return self.position
+
+
+
+    def check_price(
+        self,
+        price
+    ):
+
+
+        if not self.position:
+
+            return None
+
+
+
+        p = self.position
+
+
+        result = None
+
+
+
+        if p["side"] == "LONG":
+
+
+            if price >= p["take_profit"]:
+
+                result = "TP"
+
+
+            elif price <= p["stop_loss"]:
+
+                result = "SL"
+
+
+
+        if result:
+
+
+            profit = (
+                price - p["entry"]
+            ) * p["qty"]
+
+
+            self.balance += profit
+
+
+            trade = {
+
+                "result": result,
+
+                "profit":
+                    round(profit,2),
+
+                "price":
+                    price,
+
+                "balance":
+                    round(self.balance,2)
+
+            }
+
+
+            self.history.append(trade)
+
+            self.position = None
+
+
+            return trade
+
+
+
+        return {
+            "status":
+                "OPEN",
+            "price":
+                price
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\bos.py ====================
+
+class BOSEngine:
+
+
+    def analyze(
+        self,
+        candles,
+        pivot_highs,
+        pivot_lows,
+    ):
+
+        result = {
+            "trend_structure": "RANGE",
+            "bos": False,
+            "choch": False,
+            "break_level": None,
+        }
+
+
+        if not candles:
+            return result
+
+
+        close = candles[-1][7]
+
+
+        last_high = None
+        last_low = None
+
+
+        if pivot_highs:
+            last_high = pivot_highs[-1]
+
+
+        if pivot_lows:
+            last_low = pivot_lows[-1]
+
+
+
+        if last_high and close > last_high["price"]:
+
+            result["trend_structure"] = "BULLISH"
+            result["bos"] = True
+
+            result["break_level"] = {
+                "type": "HIGH",
+                "price": last_high["price"],
+            }
+
+
+
+        elif last_low and close < last_low["price"]:
+
+            result["trend_structure"] = "BEARISH"
+            result["bos"] = True
+
+            result["break_level"] = {
+                "type": "LOW",
+                "price": last_low["price"],
+            }
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\choch.py ====================
+
+class CHoCHEngine:
+
+
+    def analyze(
+        self,
+        candles,
+        pivot_highs,
+        pivot_lows,
+    ):
+
+        result = {
+            "choch": False,
+            "direction": None,
+            "break_level": None,
+        }
+
+
+        if len(pivot_highs) < 2:
+            return result
+
+
+        if len(pivot_lows) < 2:
+            return result
+
+
+        close = candles[-1][7]
+
+
+        last_high = pivot_highs[-1]
+        previous_high = pivot_highs[-2]
+
+
+        last_low = pivot_lows[-1]
+        previous_low = pivot_lows[-2]
+
+
+
+        # Bearish CHoCH
+        # Price breaks previous higher low
+
+        if (
+            previous_low["price"] > last_low["price"]
+            and close < last_low["price"]
+        ):
+
+            result["choch"] = True
+            result["direction"] = "BEARISH"
+
+            result["break_level"] = {
+                "type": "LOW",
+                "price": last_low["price"],
+            }
+
+
+
+        # Bullish CHoCH
+        # Price breaks previous lower high
+
+        elif (
+            previous_high["price"] < last_high["price"]
+            and close > last_high["price"]
+        ):
+
+            result["choch"] = True
+            result["direction"] = "BULLISH"
+
+            result["break_level"] = {
+                "type": "HIGH",
+                "price": last_high["price"],
+            }
+
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\entry.py ====================
+
+class EntryEngine:
+
+
+    def analyze(
+        self,
+        features,
+        strategy,
+        structure
+    ):
+
+        result = {
+
+            "setup": "NONE",
+
+            "confidence": 0,
+
+            "entry_zone": None,
+
+            "stop_loss": None,
+
+            "take_profit": None,
+
+            "risk_reward": None,
+
+        }
+
+
+        signal = strategy.get(
+            "signal"
+        )
+
+
+        atr = features.get(
+            "atr"
+        )
+
+
+        if not atr:
+            return result
+
+
+
+        #
+        # LONG
+        #
+
+        if signal == "LONG":
+
+
+            blocks = structure.get(
+                "bullish_order_blocks",
+                []
+            )
+
+
+            if blocks:
+
+
+                block = blocks[-1]
+
+
+                entry_low = block["low"]
+
+                entry_high = block["high"]
+
+
+                stop = entry_low - atr * 0.5
+
+
+
+                highs = structure.get(
+                    "equal_highs",
+                    []
+                )
+
+
+                if highs:
+
+
+                    target = highs[-1]["price"]
+
+
+                    risk = entry_high - stop
+
+                    reward = target - entry_high
+
+
+
+                    if risk > 0:
+
+
+                        rr = reward / risk
+
+
+
+                        result = {
+
+                            "setup":
+                                "LONG",
+
+
+                            "confidence":
+                                70,
+
+
+                            "entry_zone":
+                            {
+
+                                "low":
+                                    entry_low,
+
+                                "high":
+                                    entry_high,
+
+                            },
+
+
+                            "stop_loss":
+                                round(
+                                    stop,
+                                    2
+                                ),
+
+
+                            "take_profit":
+                                round(
+                                    target,
+                                    2
+                                ),
+
+
+                            "risk_reward":
+                                round(
+                                    rr,
+                                    2
+                                ),
+
+                        }
+
+
+
+        #
+        # SHORT
+        #
+
+        elif signal == "SHORT":
+
+
+            blocks = structure.get(
+                "bearish_order_blocks",
+                []
+            )
+
+
+            if blocks:
+
+
+                block = blocks[-1]
+
+
+                entry_low = block["low"]
+
+                entry_high = block["high"]
+
+
+                stop = entry_high + atr * 0.5
+
+
+
+                lows = structure.get(
+                    "equal_lows",
+                    []
+                )
+
+
+                target = None
+
+
+                if lows:
+
+                    target = lows[-1]["price"]
+
+
+
+                result = {
+
+
+                    "setup":
+                        "SHORT",
+
+
+                    "confidence":
+                        70,
+
+
+                    "entry_zone":
+                    {
+
+                        "low":
+                            entry_low,
+
+                        "high":
+                            entry_high,
+
+                    },
+
+
+                    "stop_loss":
+                        round(
+                            stop,
+                            2
+                        ),
+
+
+                    "take_profit":
+                        target,
+
+
+                }
+
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\liquidity.py ====================
+
+class LiquidityEngine:
+
+
+    def find_equal_highs(
+        self,
+        pivot_highs,
+        tolerance=0.002
+    ):
+
+        pools = []
+
+
+        for i in range(len(pivot_highs)):
+
+            for j in range(i + 1, len(pivot_highs)):
+
+                price1 = pivot_highs[i]["price"]
+                price2 = pivot_highs[j]["price"]
+
+
+                difference = abs(price1 - price2) / price1
+
+
+                if difference <= tolerance:
+
+                    pools.append({
+
+                        "type": "EQUAL_HIGH",
+
+                        "price": round(
+                            (price1 + price2) / 2,
+                            2
+                        ),
+
+                        "points": [
+                            pivot_highs[i],
+                            pivot_highs[j],
+                        ]
+
+                    })
+
+
+        return pools
+
+
+
+    def find_equal_lows(
+        self,
+        pivot_lows,
+        tolerance=0.002
+    ):
+
+        pools = []
+
+
+        for i in range(len(pivot_lows)):
+
+            for j in range(i + 1, len(pivot_lows)):
+
+                price1 = pivot_lows[i]["price"]
+                price2 = pivot_lows[j]["price"]
+
+
+                difference = abs(price1 - price2) / price1
+
+
+                if difference <= tolerance:
+
+                    pools.append({
+
+                        "type": "EQUAL_LOW",
+
+                        "price": round(
+                            (price1 + price2) / 2,
+                            2
+                        ),
+
+                        "points": [
+                            pivot_lows[i],
+                            pivot_lows[j],
+                        ]
+
+                    })
+
+
+        return pools
+
+
+
+    def analyze(
+        self,
+        pivot_highs,
+        pivot_lows
+    ):
+
+        equal_highs = self.find_equal_highs(
+            pivot_highs
+        )
+
+
+        equal_lows = self.find_equal_lows(
+            pivot_lows
+        )
+
+
+        return {
+
+            "equal_highs": equal_highs,
+
+            "equal_lows": equal_lows,
+
+            "liquidity_count":
+                len(equal_highs)
+                +
+                len(equal_lows)
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\order_block.py ====================
+
+class OrderBlockDetector:
+
+
+    def analyze(
+        self,
+        candles
+    ):
+
+        bullish_blocks = []
+
+        bearish_blocks = []
+
+
+        if len(candles) < 5:
+            return {
+
+                "bullish_order_blocks": [],
+
+                "bearish_order_blocks": [],
+
+            }
+
+
+
+        for i in range(
+            1,
+            len(candles) - 2
+        ):
+
+
+            current = candles[i]
+
+            next_candle = candles[i + 1]
+
+
+
+            open_price = current[4]
+
+            high = current[5]
+
+            low = current[6]
+
+            close = current[7]
+
+
+
+            next_open = next_candle[4]
+
+            next_close = next_candle[7]
+
+
+
+            #
+            # Bullish Order Block
+            #
+            # Красная свеча
+            # затем сильный рост
+            #
+
+            if (
+                close < open_price
+                and next_close > next_open
+                and next_close > high
+            ):
+
+                bullish_blocks.append({
+
+                    "type":
+                        "BULLISH_OB",
+
+                    "high":
+                        high,
+
+                    "low":
+                        low,
+
+                    "index":
+                        i,
+
+                    "time":
+                        current[3],
+
+                })
+
+
+
+            #
+            # Bearish Order Block
+            #
+            # Зеленая свеча
+            # затем сильное падение
+            #
+
+            if (
+                close > open_price
+                and next_close < next_open
+                and next_close < low
+            ):
+
+                bearish_blocks.append({
+
+                    "type":
+                        "BEARISH_OB",
+
+                    "high":
+                        high,
+
+                    "low":
+                        low,
+
+                    "index":
+                        i,
+
+                    "time":
+                        current[3],
+
+                })
+
+
+
+        return {
+
+
+            "bullish_order_blocks":
+
+                bullish_blocks,
+
+
+            "bearish_order_blocks":
+
+                bearish_blocks,
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\pivot.py ====================
+
+class PivotDetector:
+
+    def find_pivots(self, candles, left=2, right=2):
+
+        pivot_highs = []
+        pivot_lows = []
+
+        for i in range(left, len(candles) - right):
+
+            high = candles[i][5]
+            low = candles[i][6]
+
+            is_high = True
+            is_low = True
+
+            for j in range(i - left, i):
+
+                if candles[j][5] >= high:
+                    is_high = False
+
+                if candles[j][6] <= low:
+                    is_low = False
+
+
+            for j in range(i + 1, i + right + 1):
+
+                if candles[j][5] > high:
+                    is_high = False
+
+                if candles[j][6] < low:
+                    is_low = False
+
+
+            if is_high and not is_low:
+
+                pivot_highs.append({
+                    "index": i,
+                    "price": high,
+                    "time": candles[i][3],
+                })
+
+
+            elif is_low and not is_high:
+
+                pivot_lows.append({
+                    "index": i,
+                    "price": low,
+                    "time": candles[i][3],
+                })
+
+
+        return pivot_highs, pivot_lows
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\structure.py ====================
+
+from app.services.smart_money.pivot import PivotDetector
+from app.services.smart_money.bos import BOSEngine
+from app.services.smart_money.choch import CHoCHEngine
+from app.services.smart_money.liquidity import LiquidityEngine
+from app.services.smart_money.sweep import SweepDetector
+from app.services.smart_money.order_block import OrderBlockDetector
+
+
+
+class StructureAnalyzer:
+
+
+    def __init__(self):
+
+        self.pivot = PivotDetector()
+
+        self.bos = BOSEngine()
+
+        self.choch = CHoCHEngine()
+
+        self.liquidity = LiquidityEngine()
+
+        self.sweep = SweepDetector()
+
+        self.order_block = OrderBlockDetector()
+
+
+
+    def analyze(
+        self,
+        candles
+    ):
+
+
+        pivot_highs, pivot_lows = self.pivot.find_pivots(
+            candles
+        )
+
+
+        bos_result = self.bos.analyze(
+            candles,
+            pivot_highs,
+            pivot_lows,
+        )
+
+
+        choch_result = self.choch.analyze(
+            candles,
+            pivot_highs,
+            pivot_lows,
+        )
+
+
+        liquidity_result = self.liquidity.analyze(
+            pivot_highs,
+            pivot_lows,
+        )
+
+
+        sweep_result = self.sweep.analyze(
+            candles,
+            liquidity_result,
+        )
+
+
+        order_block_result = self.order_block.analyze(
+            candles
+        )
+
+
+
+        return {
+
+
+            **bos_result,
+
+            **choch_result,
+
+            **liquidity_result,
+
+            **sweep_result,
+
+            **order_block_result,
+
+
+
+            "last_pivot_high":
+
+                pivot_highs[-1]
+                if pivot_highs
+                else None,
+
+
+            "last_pivot_low":
+
+                pivot_lows[-1]
+                if pivot_lows
+                else None,
+
+
+            "pivot_highs":
+
+                pivot_highs,
+
+
+            "pivot_lows":
+
+                pivot_lows,
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\sweep.py ====================
+
+class SweepDetector:
+
+
+    def analyze(
+        self,
+        candles,
+        liquidity
+    ):
+
+        result = {
+
+            "sweep": False,
+
+            "type": None,
+
+            "level": None,
+
+        }
+
+
+        if not candles:
+            return result
+
+
+        candle = candles[-1]
+
+
+        high = candle[5]
+
+        low = candle[6]
+
+        close = candle[7]
+
+
+
+        # BUY SIDE LIQUIDITY
+        # Снятие равных максимумов
+
+        for pool in liquidity.get(
+            "equal_highs",
+            []
+        ):
+
+            level = pool["price"]
+
+
+            if (
+                high > level
+                and close < level
+            ):
+
+                return {
+
+                    "sweep": True,
+
+                    "type":
+                        "BUY_SIDE_LIQUIDITY",
+
+                    "level": level,
+
+                }
+
+
+
+        # SELL SIDE LIQUIDITY
+        # Снятие равных минимумов
+
+        for pool in liquidity.get(
+            "equal_lows",
+            []
+        ):
+
+            level = pool["price"]
+
+
+            if (
+                low < level
+                and close > level
+            ):
+
+                return {
+
+                    "sweep": True,
+
+                    "type":
+                        "SELL_SIDE_LIQUIDITY",
+
+                    "level": level,
+
+                }
+
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\smart_money\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\bounce.py ====================
+
+class BounceStrategy:
+
+    def analyze(self, features):
+
+        close = features["close"]
+        sma = features["sma"]
+
+        score = 0
+        reasons = []
+
+        distance = abs(close - sma) / sma
+
+
+        # цена рядом со средней зоной
+        if distance < 0.005:
+
+            score += 20
+            reasons.append(
+                "PRICE NEAR LEVEL +20"
+            )
+
+
+        # проверяем RSI
+
+        rsi = features.get(
+            "rsi",
+            50
+        )
+
+
+        if rsi < 40:
+
+            score += 15
+            reasons.append(
+                "OVERSOLD BOUNCE +15"
+            )
+
+
+        if rsi > 60:
+
+            score += 15
+            reasons.append(
+                "OVERBOUGHT REJECTION +15"
+            )
+
+
+        if score >= 30:
+
+            signal = "BOUNCE"
+
+        else:
+
+            signal = "NONE"
+
+
+
+        return {
+
+            "strategy":
+                "BOUNCE",
+
+            "signal":
+                signal,
+
+            "score":
+                score,
+
+            "reasons":
+                reasons
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\breakout.py ====================
+
+class BreakoutStrategy:
+
+    def analyze(self, features):
+
+        closes = features.get(
+            "closes",
+            []
+        )
+
+        volumes = features.get(
+            "volumes",
+            []
+        )
+
+        close = features["close"]
+
+
+        score = 0
+        reasons = []
+
+
+        if len(closes) < 20:
+
+            return {
+
+                "strategy":"BREAKOUT",
+
+                "signal":"NONE",
+
+                "score":0,
+
+                "reasons":[
+                    "NOT ENOUGH DATA"
+                ]
+            }
+
+
+
+        # диапазон последних свечей
+
+        high_range = max(
+            closes[-20:]
+        )
+
+        low_range = min(
+            closes[-20:]
+        )
+
+
+        # пробой вверх
+
+        if close > high_range * 0.998:
+
+            score += 25
+
+            reasons.append(
+                "BREAK HIGH +25"
+            )
+
+
+        # пробой вниз
+
+        elif close < low_range * 1.002:
+
+            score += 25
+
+            reasons.append(
+                "BREAK LOW +25"
+            )
+
+
+
+        # проверяем объём
+
+        if len(volumes) >= 20:
+
+            avg_volume = sum(
+                volumes[-20:]
+            ) / 20
+
+
+            if volumes[-1] > avg_volume:
+
+                score += 20
+
+                reasons.append(
+                    "VOLUME CONFIRM +20"
+                )
+
+
+
+        if score >= 40:
+
+            signal = "BREAKOUT"
+
+        else:
+
+            signal = "NONE"
+
+
+
+        return {
+
+            "strategy":
+                "BREAKOUT",
+
+            "signal":
+                signal,
+
+            "score":
+                score,
+
+            "reasons":
+                reasons
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\fake_breakout.py ====================
+
+class FakeBreakoutStrategy:
+
+    def analyze(self, features):
+
+        closes = features.get(
+            "closes",
+            []
+        )
+
+        volumes = features.get(
+            "volumes",
+            []
+        )
+
+        close = features["close"]
+
+
+        score = 0
+        reasons = []
+
+
+        if len(closes) < 20:
+
+            return {
+
+                "strategy":"FAKE_BREAKOUT",
+
+                "signal":"NONE",
+
+                "score":0,
+
+                "reasons":[
+                    "NOT ENOUGH DATA"
+                ]
+            }
+
+
+
+        previous_high = max(
+            closes[-20:-1]
+        )
+
+        previous_low = min(
+            closes[-20:-1]
+        )
+
+
+
+        # ложный пробой вверх
+        # вышли выше уровня и вернулись назад
+
+        if max(closes[-3:]) > previous_high and close < previous_high:
+
+            score += 30
+
+            reasons.append(
+                "FAILED HIGH BREAK +30"
+            )
+
+
+            signal = "SHORT"
+
+
+
+        # ложный пробой вниз
+
+        elif min(closes[-3:]) < previous_low and close > previous_low:
+
+            score += 30
+
+            reasons.append(
+                "FAILED LOW BREAK +30"
+            )
+
+
+            signal = "LONG"
+
+
+
+        else:
+
+            signal = "NONE"
+
+
+
+        # подтверждение объёмом
+
+        if len(volumes) >= 20:
+
+            avg_volume = sum(
+                volumes[-20:]
+            ) / 20
+
+
+            if volumes[-1] > avg_volume:
+
+                score += 20
+
+                reasons.append(
+                    "VOLUME CONFIRM +20"
+                )
+
+
+
+        if score < 30:
+
+            signal = "NONE"
+
+
+
+        return {
+
+            "strategy":
+                "FAKE_BREAKOUT",
+
+            "signal":
+                signal,
+
+            "score":
+                score,
+
+            "reasons":
+                reasons
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\imbalance.py ====================
+
+class ImbalanceStrategy:
+
+    def analyze(self, features):
+
+        highs = features.get(
+            "highs",
+            []
+        )
+
+        lows = features.get(
+            "lows",
+            []
+        )
+
+        closes = features.get(
+            "closes",
+            []
+        )
+
+
+        score = 0
+        reasons = []
+
+
+        if len(closes) < 5:
+
+            return {
+
+                "strategy":"IMBALANCE",
+
+                "signal":"NONE",
+
+                "score":0,
+
+                "reasons":[
+                    "NOT ENOUGH DATA"
+                ]
+
+            }
+
+
+
+        current = closes[-1]
+
+        previous = closes[-2]
+
+
+
+        # сильное движение вверх
+
+        move_up = (
+            current - previous
+        ) / previous
+
+
+
+        # сильное движение вниз
+
+        move_down = (
+            previous - current
+        ) / previous
+
+
+
+        signal = "NONE"
+
+
+
+        # бычий имбаланс
+
+        if move_up > 0.003:
+
+            score += 30
+
+            reasons.append(
+                "BULLISH IMBALANCE +30"
+            )
+
+            signal = "LONG"
+
+
+
+        # медвежий имбаланс
+
+        elif move_down > 0.003:
+
+            score += 30
+
+            reasons.append(
+                "BEARISH IMBALANCE +30"
+            )
+
+            signal = "SHORT"
+
+
+
+        # проверка объёма
+
+        volumes = features.get(
+            "volumes",
+            []
+        )
+
+
+        if len(volumes) >= 20:
+
+            avg_volume = sum(
+                volumes[-20:]
+            ) / 20
+
+
+            if volumes[-1] > avg_volume:
+
+                score += 20
+
+                reasons.append(
+                    "IMBALANCE WITH VOLUME +20"
+                )
+
+
+
+        if score < 30:
+
+            signal = "NONE"
+
+
+
+        return {
+
+            "strategy":
+                "IMBALANCE",
+
+            "signal":
+                signal,
+
+            "score":
+                score,
+
+            "reasons":
+                reasons
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\range_break.py ====================
+
+class RangeBreakStrategy:
+
+    def analyze(self, features):
+
+        closes = features.get(
+            "closes",
+            []
+        )
+
+        volumes = features.get(
+            "volumes",
+            []
+        )
+
+
+        score = 0
+        reasons = []
+
+
+        if len(closes) < 30:
+
+            return {
+
+                "strategy":"RANGE_BREAK",
+
+                "signal":"NONE",
+
+                "score":0,
+
+                "reasons":[
+                    "NOT ENOUGH DATA"
+                ]
+            }
+
+
+
+        recent = closes[-20:]
+
+
+        high = max(recent)
+
+        low = min(recent)
+
+
+        range_size = (
+            high - low
+        ) / low
+
+
+
+        # проверяем сжатие
+
+        if range_size < 0.015:
+
+            score += 25
+
+            reasons.append(
+                "TIGHT RANGE +25"
+            )
+
+
+
+        current = closes[-1]
+
+
+
+        signal = "NONE"
+
+
+
+        # выход вверх
+
+        if current > high * 0.998:
+
+            score += 30
+
+            reasons.append(
+                "RANGE BREAK UP +30"
+            )
+
+            signal = "LONG"
+
+
+
+        # выход вниз
+
+        elif current < low * 1.002:
+
+            score += 30
+
+            reasons.append(
+                "RANGE BREAK DOWN +30"
+            )
+
+            signal = "SHORT"
+
+
+
+        # объём подтверждает
+
+        if len(volumes) >= 20:
+
+            avg_volume = sum(
+                volumes[-20:]
+            ) / 20
+
+
+            if volumes[-1] > avg_volume:
+
+                score += 20
+
+                reasons.append(
+                    "VOLUME CONFIRM +20"
+                )
+
+
+
+        if score < 40:
+
+            signal = "NONE"
+
+
+
+        return {
+
+            "strategy":
+                "RANGE_BREAK",
+
+            "signal":
+                signal,
+
+            "score":
+                score,
+
+            "reasons":
+                reasons
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\trend.py ====================
+
+class TrendStrategy:
+
+
+    def analyze(self, features):
+
+        close = features["close"]
+        ema = features["ema"]
+        rsi = features["rsi"]
+
+
+        result = {
+            "trend": "NEUTRAL",
+            "momentum": "NEUTRAL",
+            "signal": "WAIT",
+        }
+
+
+        if close > ema:
+            result["trend"] = "BULLISH"
+
+        elif close < ema:
+            result["trend"] = "BEARISH"
+
+
+
+        if rsi >= 70:
+            result["momentum"] = "OVERBOUGHT"
+
+        elif rsi <= 30:
+            result["momentum"] = "OVERSOLD"
+
+
+
+        if (
+            result["trend"] == "BULLISH"
+            and result["momentum"] != "OVERBOUGHT"
+        ):
+            result["signal"] = "LONG"
+
+
+        elif (
+            result["trend"] == "BEARISH"
+            and result["momentum"] != "OVERSOLD"
+        ):
+            result["signal"] = "SHORT"
+
+
+        return result
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\volume.py ====================
+
+class VolumeStrategy:
+
+    def analyze(self, features):
+
+        volumes = features.get(
+            "volumes",
+            []
+        )
+
+        closes = features.get(
+            "closes",
+            []
+        )
+
+        score = 0
+        reasons = []
+
+
+        if len(volumes) < 20 or len(closes) < 20:
+
+            return {
+
+                "strategy":"VOLUME",
+
+                "signal":"NONE",
+
+                "score":0,
+
+                "reasons":[
+                    "NOT ENOUGH DATA"
+                ]
+            }
+
+
+
+        current_volume = volumes[-1]
+
+
+        avg_volume = sum(
+            volumes[-20:]
+        ) / 20
+
+
+
+        volume_ratio = (
+            current_volume / avg_volume
+            if avg_volume > 0
+            else 0
+        )
+
+
+
+        # сильный объём
+
+        if volume_ratio > 2:
+
+            score += 35
+
+            reasons.append(
+                "VOLUME SPIKE x2 +35"
+            )
+
+
+        elif volume_ratio > 1.5:
+
+            score += 20
+
+            reasons.append(
+                "HIGH VOLUME +20"
+            )
+
+
+
+        # направление движения
+
+        price_change = (
+            closes[-1] - closes[-2]
+        )
+
+
+        if price_change > 0:
+
+            score += 10
+
+            reasons.append(
+                "BUY PRESSURE +10"
+            )
+
+
+            signal = "LONG"
+
+
+        elif price_change < 0:
+
+            score += 10
+
+            reasons.append(
+                "SELL PRESSURE +10"
+            )
+
+
+            signal = "SHORT"
+
+
+        else:
+
+            signal = "NONE"
+
+
+
+        if score < 30:
+
+            signal = "NONE"
+
+
+
+        return {
+
+            "strategy":
+                "VOLUME",
+
+            "signal":
+                signal,
+
+            "score":
+                score,
+
+            "reasons":
+                reasons,
+
+            "volume_ratio":
+                round(volume_ratio,2)
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\services\strategies\__init__.py ====================
+
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\web\api.py ====================
+
+from fastapi import FastAPI
+
+from app.services.scanner_engine import get_signals
+
+
+app = FastAPI()
+
+
+
+@app.get("/")
+def home():
+
+    return {
+
+        "status":
+            "LIVE",
+
+        "service":
+            "Bybit Pro Terminal X"
+
+    }
+
+
+
+
+
+@app.get("/signals")
+def signals():
+
+
+    try:
+
+
+        data = get_signals()
+
+
+
+        if data is None:
+
+            data = []
+
+
+
+        return {
+
+
+            "status":
+
+                "LIVE",
+
+
+
+            "count":
+
+                len(data),
+
+
+
+            "signals":
+
+                data
+
+
+
+        }
+
+
+
+    except Exception as e:
+
+
+        return {
+
+
+            "status":
+
+                "ERROR",
+
+
+
+            "count":
+
+                0,
+
+
+
+            "signals":
+
+                [],
+
+
+
+            "error":
+
+                str(e)
+
+        }
+
+==================== C:\Users\kapyl\Desktop\BybitProTerminalX\app\web\server.py ====================
+
+from flask import Flask, render_template
+from app.services.scanner_engine import ScannerEngine
+
+
+app = Flask(
+    __name__,
+    template_folder="templates"
+)
+
+
+scanner = ScannerEngine()
+
+
+@app.route("/")
+def index():
+
+    signals = []
+
+    try:
+
+        candles = []
+
+
+        for i in range(60):
+
+            candles.append(
+                {
+                    "close": str(100 - i * 0.5),
+                    "volume": "5000"
+                }
+            )
+
+
+        candles[-1]["volume"] = "50000"
+
+
+        result = scanner.scan_symbol(
+            "TESTUSDT",
+            candles
+        )
+
+
+        if result:
+            signals.append(result)
+
+
+    except Exception as e:
+
+        print(
+            "WEB ERROR:",
+            e
+        )
+
+
+    return render_template(
+        "index.html",
+        signals=signals
+    )
+
+
+
+if __name__ == "__main__":
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )

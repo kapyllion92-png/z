@@ -1,0 +1,5 @@
+﻿{
+    "mode": "PAPER",
+    "balance": 10000,
+    "position": null
+}

@@ -1,0 +1,149 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Bybit Pro Terminal X</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    background:#f4f7fb;
+    padding:30px;
+    color:#222;
+}
+
+h1{
+    color:#1e40af;
+}
+
+.card{
+    background:white;
+    border-radius:15px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,.1);
+}
+
+.long{
+    border-left:8px solid #16a34a;
+}
+
+.short{
+    border-left:8px solid #dc2626;
+}
+
+.item{
+    margin:10px 0;
+    font-size:17px;
+}
+
+.badge{
+    padding:6px 14px;
+    border-radius:20px;
+    color:white;
+    background:#2563eb;
+}
+
+.reason{
+    padding:6px;
+    font-size:16px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>🚀 Bybit Pro Terminal X</h1>
+
+<h2>📡 Торговые сигналы</h2>
+
+
+{% if signals %}
+
+{% for s in signals %}
+
+<div class="card {% if s.direction == 'LONG' %}long{% else %}short{% endif %}">
+
+<h2>
+{{s.symbol}}
+
+<span class="badge">
+{% if s.direction == "LONG" %}
+🟢 ЛОНГ
+{% else %}
+🔴 ШОРТ
+{% endif %}
+</span>
+
+</h2>
+
+
+<div class="item">
+💪 Сила сигнала:
+<b>{{s.score}} / 100</b>
+</div>
+
+
+<div class="item">
+💰 Цена: {{s.price}}
+</div>
+
+
+<div class="item">
+🎯 Точка входа: {{s.entry}}
+</div>
+
+
+<div class="item">
+🛑 Стоп: {{s.stop}}
+</div>
+
+
+<div class="item">
+🏆 Цель 1: {{s.take1}}
+</div>
+
+
+<div class="item">
+🏆 Цель 2: {{s.take2}}
+</div>
+
+
+<div class="item">
+🏆 Цель 3: {{s.take3}}
+</div>
+
+
+<div class="item">
+📉 RSI: {{s.rsi}}
+</div>
+
+
+<h3>📌 Причины сигнала:</h3>
+
+
+{% for r in s.reasons %}
+<div class="reason">
+{{r}}
+</div>
+{% endfor %}
+
+
+</div>
+
+
+{% endfor %}
+
+{% else %}
+
+<div class="card">
+<h2>⏳ Нет сигналов</h2>
+</div>
+
+{% endif %}
+
+
+</body>
+</html>
+

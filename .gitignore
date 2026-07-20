@@ -3,3 +3,12 @@
 __pycache__/
 *.pyc
 market_history.db
+
+data/
+dataset/
+models/
+app/data/
+*.csv
+*.parquet
+*.db
+*.sqlite

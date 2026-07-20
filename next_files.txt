@@ -1,0 +1,270 @@
+﻿SYMBOLS = [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+]
+
+
+INTERVALS = [
+    "5",
+    "15",
+    "60",
+    "240",
+    "D",
+]
+
+
+DEFAULT_HISTORY_LIMIT = 1000
+from app.services.market_data.candles import CandleDataEngine
+from app.services.market_data.parser import parse_candles
+from app.services.historical.database import HistoricalDatabase
+
+
+class HistoricalCollector:
+
+    def __init__(self):
+        self.market = CandleDataEngine()
+        self.database = HistoricalDatabase()
+
+
+    def collect(self, symbol="BTCUSDT", interval="60", limit=200):
+
+        response = self.market.get_candles(
+            symbol=symbol,
+            interval=interval,
+            limit=limit,
+        )
+
+        candles = parse_candles(
+            response["result"]["list"]
+        )
+
+        for candle in candles:
+            self.database.save_candle(
+                symbol,
+                interval,
+                candle
+            )
+
+        return len(candles)
+from app.services.bybit_client import BybitClient
+from app.services.market_analyzer import MarketAnalyzer
+
+
+SIGNALS = []
+
+
+class ScannerEngine:
+
+
+    def __init__(self):
+
+        self.client = BybitClient()
+
+        self.analyzer = MarketAnalyzer()
+
+
+
+    def scan_symbol(self, symbol):
+
+        try:
+
+
+            candles = self.client.get_candles(
+                symbol,
+                "60",
+                100
+            )
+
+
+            print(
+                symbol,
+                "свечей:",
+                len(candles)
+            )
+
+
+
+            if len(candles) < 50:
+
+                print(
+                    symbol,
+                    "мало свечей"
+                )
+
+                return None
+
+
+
+            result = self.analyzer.analyze(
+                candles[::-1]
+            )
+
+
+
+            ranking = result.get(
+                "ranking",
+                {}
+            )
+
+
+            entry = result.get(
+                "entry",
+                {}
+            )
+
+
+
+            print(
+                symbol,
+                "сигнал:",
+                ranking.get("signal"),
+                "score:",
+                ranking.get("score")
+            )
+
+
+
+            signal = ranking.get(
+                "signal",
+                "WAIT"
+            )
+
+
+
+            if signal == "WAIT":
+
+                return None
+
+
+
+            return {
+
+
+                "symbol":
+                    symbol,
+
+
+                "direction":
+                    signal,
+
+
+                "score":
+                    ranking.get(
+                        "score",
+                        0
+                    ),
+
+
+                "price":
+                    result["features"].get(
+                        "close",
+                        0
+                    ),
+
+
+                "rsi":
+                    result["features"].get(
+                        "rsi",
+                        0
+                    ),
+
+
+                "confidence":
+                    entry.get(
+                        "confidence",
+                        0
+                    ),
+
+
+                "stop":
+                    entry.get(
+                        "stop_loss",
+                        0
+                    ),
+
+
+                "reasons":
+                    ranking.get(
+                        "reasons",
+                        []
+                    )
+
+            }
+
+
+
+        except Exception as e:
+
+
+            print(
+                "ОШИБКА:",
+                symbol,
+                e
+            )
+
+            return None
+
+
+
+
+
+def get_signals():
+
+
+    global SIGNALS
+
+
+    SIGNALS=[]
+
+
+
+    client = BybitClient()
+
+
+    engine = ScannerEngine()
+
+
+
+    symbols = client.get_symbols()
+
+
+
+    print(
+        "ВСЕГО МОНЕТ:",
+        len(symbols)
+    )
+
+
+
+    for symbol in symbols[:20]:
+
+
+        result = engine.scan_symbol(
+            symbol
+        )
+
+
+        if result:
+
+            SIGNALS.append(
+                result
+            )
+
+
+
+    SIGNALS.sort(
+        key=lambda x:x["score"],
+        reverse=True
+    )
+
+
+
+    print(
+        "НАЙДЕНО:",
+        len(SIGNALS)
+    )
+
+
+
+    return SIGNALS[:10]

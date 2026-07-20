@@ -1,67 +1,74 @@
 ﻿class ScoreEngine:
 
 
-    def calculate(self, features, reasons, score):
+    def calculate(
+        self,
+        features,
+        structure=None,
+        pattern=0
+    ):
+
+        score = 50
+        reasons = []
 
 
-        indicators = features.get(
-            "indicators",
-            {}
-        )
-
-
-        if not indicators:
-            return score, reasons
+        rsi = features.get("rsi",50)
+        macd = features.get("macd",0)
+        trend = features.get("trend","")
+        momentum = features.get("momentum",0)
+        volume = features.get("volume_ratio",0)
 
 
 
         # RSI
 
-        rsi = indicators.get(
-            "rsi",
-            50
-        )
+        if rsi < 20:
 
+            score -= 25
 
-        if rsi < 35:
+            reasons.append(
+                "RSI extreme oversold - риск отскока"
+            )
 
-            score += 10
+        elif rsi < 30:
+
+            score -= 10
 
             reasons.append(
                 "RSI oversold"
             )
 
+        elif rsi > 80:
 
-        elif rsi > 65:
-
-            score += 5
+            score -= 25
 
             reasons.append(
-                "RSI momentum"
-
-
-
+                "RSI extreme overbought"
             )
 
+        elif rsi > 70:
 
-
-        # TREND EMA
-
-        if indicators.get("trend") == "BULLISH":
-
-            score += 10
+            score -= 10
 
             reasons.append(
-                "EMA bullish trend"
+                "RSI overbought"
             )
 
 
 
         # MACD
 
-        if indicators.get("macd",0) > 0:
+        if macd < 0:
 
-            score += 10
+            score += 15
+
+            reasons.append(
+                "MACD bearish"
+            )
+
+        else:
+
+            score += 15
 
             reasons.append(
                 "MACD bullish"
@@ -69,34 +76,119 @@
 
 
 
-        # VOLUME
+        # TREND
 
-        if indicators.get("volume_ratio",0) > 2:
+        if trend == "BEARISH":
 
             score += 15
 
             reasons.append(
-                "Volume spike"
+                "EMA bearish"
+            )
+
+
+        elif trend == "BULLISH":
+
+            score += 15
+
+            reasons.append(
+                "EMA bullish"
             )
 
 
 
         # MOMENTUM
 
-        if indicators.get("momentum",0) > 0:
+        if momentum < 0:
 
-            score += 5
+            score += 10
 
             reasons.append(
-                "Momentum positive"
+                "Momentum bearish"
+            )
+
+        else:
+
+            score += 10
+
+            reasons.append(
+                "Momentum bullish"
             )
 
 
 
-        if score > 100:
+        # VOLUME
 
-            score = 100
+        if volume > 1.5:
+
+            score += 5
+
+            reasons.append(
+                "Volume confirmation"
+            )
 
 
 
-        return score, reasons
+        score = max(
+            0,
+            min(
+                score,
+                100
+            )
+        )
+
+
+
+        # SIGNAL
+
+        if trend == "BEARISH" and macd < 0:
+
+            signal = "SHORT"
+
+        elif trend == "BULLISH" and macd > 0:
+
+            signal = "LONG"
+
+        else:
+
+            signal = "WAIT"
+
+
+
+        confidence = score
+
+
+
+        if confidence >= 80:
+
+            status = "READY"
+
+        elif confidence >= 60:
+
+            status = "WATCH"
+
+        else:
+
+            status = "NO_TRADE"
+
+
+
+        if rsi < 20:
+
+            status = "WATCH"
+
+
+
+        return {
+
+            "signal": signal,
+
+            "score": score,
+
+            "confidence": confidence,
+
+            "status": status,
+
+            "reasons": reasons
+
+        }

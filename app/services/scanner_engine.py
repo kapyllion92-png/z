@@ -11,6 +11,12 @@ class ScannerEngine:
         self.client = BybitClient()
 
         try:
+            from app.services.indicator_engine import IndicatorEngine
+            self.indicator_engine = IndicatorEngine()
+        except Exception:
+            self.indicator_engine = None
+
+        try:
             from app.services.strategy_engine import StrategyEngine
             self.strategy_engine = StrategyEngine()
         except Exception:
@@ -337,6 +343,8 @@ class ScannerEngine:
 
                 "volume_x": volume_x,
 
+                "indicators": features.get("indicators", {}),
+
                 "reasons": reasons
 
             }
@@ -427,6 +435,9 @@ def get_signals():
 
 
     return SIGNALS[:10]
+
+
+
 
 
 

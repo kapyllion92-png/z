@@ -29,6 +29,16 @@ class MarketAnalyzer:
 
         smart_money = self.smart_money.analyze(candles)
 
+        try:
+
+            final_smc = self.smart_money.final_entry_model(candles)
+
+            smart_money["FINAL_ENGINE"] = final_smc
+
+        except Exception as e:
+
+            smart_money["FINAL_ENGINE_ERROR"] = str(e)
+
 
         print("FEATURES:", features)
 

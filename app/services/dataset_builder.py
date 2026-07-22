@@ -1,268 +1,239 @@
 import os
-import pandas as pd
-import numpy as np
+import sys
+sys.path.append(os.getcwd())
+import json
+import csv
+from datetime import datetime
+
+from app.services.smart_money.choch_engine import detect_choch
+from app.services.smart_money.order_block_engine import order_block_engine_v17000
 
 
-DATA_DIR = "data"
-OUT_DIR = "dataset"
+INPUT_DIR = "data/candles"
+OUTPUT_DIR = "data/dataset"
 
-TIMEFRAMES = [
-    "5",
-    "15",
-    "60",
-    "240",
-    "D"
-]
+OUTPUT_FILE = os.path.join(
+    OUTPUT_DIR,
+    "smart_money_dataset.csv"
+)
 
 
-def ema(series, period):
-    return series.ewm(
-        span=period,
-        adjust=False
-    ).mean()
+def convert_candles(raw):
 
+    candles = []
 
-def rsi(series, period=14):
+    for x in raw:
 
-    delta = series.diff()
+        candles.append(
+            {
+                "open": float(x[1]),
+                "high": float(x[2]),
+                "low": float(x[3]),
+                "close": float(x[4]),
+                "volume": float(x[5])
+            }
+        )
 
-    gain = delta.where(delta > 0,0)
-    loss = -delta.where(delta < 0,0)
-
-    avg_gain = gain.rolling(period).mean()
-    avg_loss = loss.rolling(period).mean()
-
-    rs = avg_gain / avg_loss
-
-    return 100 - (100/(1+rs))
-
-
-def macd(series):
-
-    return (
-        ema(series,12)
-        -
-        ema(series,26)
-    )
-
-
-def atr(df,period=14):
-
-    tr1=df.high-df.low
-
-    tr2=(df.high-df.close.shift()).abs()
-
-    tr3=(df.low-df.close.shift()).abs()
-
-    tr=pd.concat(
-        [tr1,tr2,tr3],
-        axis=1
-    ).max(axis=1)
-
-    return tr.rolling(period).mean()
+    return candles
 
 
 
-def make_features(df):
-
-    df=df.copy()
-
-    df["ema20"]=ema(df.close,20)
-    df["ema50"]=ema(df.close,50)
-    df["ema200"]=ema(df.close,200)
-
-    df["rsi"]=rsi(df.close)
-
-    df["macd"]=macd(df.close)
-
-    df["atr"]=atr(df)
-
-    df["momentum"]=(
-        df.close -
-        df.close.shift(10)
-    )
-
-    df["roc"]=(
-        df.close.pct_change(10)*100
-    )
-
-
-    df["volume_ratio"]=(
-        df.volume /
-        df.volume.rolling(20).mean()
-    )
-
-
-    df["vwap"]=(
-        (df.close*df.volume)
-        .rolling(50)
-        .sum()
-        /
-        df.volume.rolling(50).sum()
-    )
-
-
-    df["trend"]="NEUTRAL"
-
-    df.loc[
-        df.close>df.ema200,
-        "trend"
-    ]="BULLISH"
-
-
-    df.loc[
-        df.close<df.ema200,
-        "trend"
-    ]="BEARISH"
-
-
-    return df
-
-
-
-def main():
+def build_dataset():
 
     os.makedirs(
-        OUT_DIR,
+        OUTPUT_DIR,
         exist_ok=True
     )
 
 
-    result=[]
+    rows = []
+
+    files = [
+        f for f in os.listdir(INPUT_DIR)
+        if f.endswith(".json")
+    ]
 
 
-    symbols=os.listdir(DATA_DIR)
+    print("FILES:", len(files))
 
 
-    print(
-        "TOTAL SYMBOLS:",
-        len(symbols)
-    )
+    processed = 0
 
 
-    for symbol in symbols:
+    for file in files:
 
-
-        folder=os.path.join(
-            DATA_DIR,
-            symbol
+        path = os.path.join(
+            INPUT_DIR,
+            file
         )
 
 
-        if not os.path.isdir(folder):
-            continue
+        try:
+
+            with open(
+                path,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                data = json.load(f)
 
 
-        print(
-            "LOAD:",
-            symbol
-        )
+            symbol = data.get(
+                "symbol",
+                "UNKNOWN"
+            )
 
-
-        for tf in TIMEFRAMES:
-
-
-            file=os.path.join(
-                folder,
-                tf+".csv"
+            timeframe = data.get(
+                "timeframe",
+                "UNKNOWN"
             )
 
 
-            if not os.path.exists(file):
+            candles = convert_candles(
+                data["candles"]
+            )
+
+
+            if len(candles) < 50:
                 continue
 
 
-            try:
 
-                df=pd.read_csv(file)
-
-
-                if len(df)<100:
-                    continue
+            ob = order_block_engine_v17000(
+                candles
+            )
 
 
-                df=make_features(df)
+            blocks = ob.get(
+                "top_order_blocks",
+                []
+            )
 
 
-                df["symbol"]=symbol
-                df["timeframe"]=tf
+            choch = detect_choch(
+                candles,
+                order_blocks=blocks
+            )
 
 
-                result.append(df)
+            last = candles[-1]
 
 
-                print(
-                    tf,
-                    len(df)
-                )
+            rows.append(
+                {
 
-
-            except Exception as e:
-
-                print(
-                    "ERROR",
+                "symbol":
                     symbol,
-                    tf,
-                    e
+
+                "timeframe":
+                    timeframe,
+
+                "close":
+                    last["close"],
+
+
+                "liquidity":
+                    choch.get(
+                        "debug",
+                        {}
+                    ).get(
+                        "sweep_low",
+                        False
+                    ),
+
+
+                "order_blocks":
+                    len(blocks),
+
+
+                "choch":
+                    choch.get(
+                        "choch"
+                    ),
+
+
+                "bos":
+                    choch.get(
+                        "bos"
+                    ),
+
+
+                "score":
+                    choch.get(
+                        "score",
+                        0
+                    ),
+
+
+                "prediction":
+                    choch.get(
+                        "prediction",
+                        "WAIT"
+                    ),
+
+
+                "time":
+                    datetime.now()
+
+                }
+
+            )
+
+
+            processed += 1
+
+
+            if processed % 100 == 0:
+
+                print(
+                    "PROCESSED:",
+                    processed
                 )
 
 
-    if not result:
+        except Exception as e:
 
-        print(
-            "NO DATA"
+            print(
+                "ERROR:",
+                file,
+                e
+            )
+
+
+
+    with open(
+        OUTPUT_FILE,
+        "w",
+        newline="",
+        encoding="utf-8"
+    ) as f:
+
+
+        writer = csv.DictWriter(
+            f,
+            fieldnames=rows[0].keys()
         )
-        return
 
 
-    dataset=pd.concat(
-        result,
-        ignore_index=True
-    )
+        writer.writeheader()
 
-
-    dataset.replace(
-        [np.inf,-np.inf],
-        np.nan,
-        inplace=True
-    )
-
-
-    dataset.dropna(
-        inplace=True
-    )
-
-
-    os.makedirs(
-        OUT_DIR,
-        exist_ok=True
-    )
-
-
-    path=os.path.join(
-        OUT_DIR,
-        "training_dataset.csv"
-    )
-
-
-    dataset.to_csv(
-        path,
-        index=False
-    )
+        writer.writerows(
+            rows
+        )
 
 
     print("====================")
-    print("DATASET CREATED")
-    print(
-        "ROWS:",
-        len(dataset)
-    )
+    print("DATASET COMPLETE")
+    print("ROWS:", len(rows))
     print(
         "FILE:",
-        path
+        OUTPUT_FILE
     )
+    print("====================")
 
 
 
-if __name__=="__main__":
-    main()
+if __name__ == "__main__":
+
+    build_dataset()

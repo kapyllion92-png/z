@@ -1,4 +1,4 @@
-п»їfrom app.services.scanner_engine import ScannerEngine
+from app.services.scanner_engine import ScannerEngine
 from app.services.bybit_client import BybitClient
 
 
@@ -21,8 +21,8 @@ class LiveScanner:
 
             symbols = self.client.get_symbols()
 
-            print("=== LIVE Р РђР”РђР  ===")
-            print("РњРѕРЅРµС‚:", len(symbols))
+            print("=== LIVE РАДАР ===")
+            print("Монет:", len(symbols))
 
 
             for symbol in symbols[:100]:
@@ -34,7 +34,7 @@ class LiveScanner:
 
                     print(
                         symbol,
-                        "СЃРІРµС‡Рё:",
+                        "свечи:",
                         len(candles)
                     )
 
@@ -65,7 +65,7 @@ class LiveScanner:
                 except Exception as e:
 
                     print(
-                        "РћС€РёР±РєР° РјРѕРЅРµС‚С‹:",
+                        "Ошибка монеты:",
                         symbol,
                         e
                     )
@@ -73,31 +73,31 @@ class LiveScanner:
 
 
             print(
-                "РРўРћР“Рћ:",
+                "ИТОГО:",
                 len(signals)
             )
 
 
             signals = sorted(
                 signals,
-                key=lambda x:x.get("СЃРёР»Р°",0),
+                key=lambda x:x.get("сила",0),
                 reverse=True
             )
 
 
             return {
 
-                "СЃС‚Р°С‚СѓСЃ":"LIVE",
+                "статус":"LIVE",
 
-                "РІСЂРµРјСЏ":"РѕРЅР»Р°Р№РЅ",
+                "время":"онлайн",
 
-                "С‚РѕРї_РїСЂРµРґСЃРёРіРЅР°Р»РѕРІ":
+                "топ_предсигналов":
                 signals[:10],
 
-                "С‚РѕРї_СЃРґРµР»РѕРє":
+                "топ_сделок":
                 signals[:10],
 
-                "РІСЃРµРіРѕ_СЃРёРіРЅР°Р»РѕРІ":
+                "всего_сигналов":
                 len(signals)
 
             }
@@ -115,13 +115,13 @@ class LiveScanner:
 
             return {
 
-                "СЃС‚Р°С‚СѓСЃ":"РћРЁРР‘РљРђ",
+                "статус":"ОШИБКА",
 
-                "РІСЂРµРјСЏ":"РѕРЅР»Р°Р№РЅ",
+                "время":"онлайн",
 
-                "С‚РѕРї_РїСЂРµРґСЃРёРіРЅР°Р»РѕРІ":[],
+                "топ_предсигналов":[],
 
-                "С‚РѕРї_СЃРґРµР»РѕРє":[],
+                "топ_сделок":[],
 
-                "РІСЃРµРіРѕ_СЃРёРіРЅР°Р»РѕРІ":0
+                "всего_сигналов":0
             }

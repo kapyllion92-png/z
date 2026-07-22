@@ -1,4 +1,4 @@
-﻿class RiskManager:
+class RiskManager:
 
 
     def __init__(

@@ -1,4 +1,4 @@
-п»їclass BounceStrategy:
+class BounceStrategy:
 
     def analyze(self, features):
 
@@ -11,7 +11,7 @@
         distance = abs(close - sma) / sma
 
 
-        # С†РµРЅР° СЂСЏРґРѕРј СЃРѕ СЃСЂРµРґРЅРµР№ Р·РѕРЅРѕР№
+        # цена рядом со средней зоной
         if distance < 0.005:
 
             score += 20
@@ -20,7 +20,7 @@
             )
 
 
-        # РїСЂРѕРІРµСЂСЏРµРј RSI
+        # проверяем RSI
 
         rsi = features.get(
             "rsi",

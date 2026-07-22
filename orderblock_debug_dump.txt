@@ -1,0 +1,1396 @@
+﻿from typing import List, Dict
+
+
+def order_block_engine_v18000(candles):
+
+    if not candles:
+        return {
+            "engine":"ORDER BLOCK ENGINE v18000",
+            "order_blocks_found":0,
+            "institutional_order_blocks":0,
+            "top_order_blocks":[]
+        }
+
+
+    data=[]
+
+
+    for c in candles:
+
+        try:
+
+            if isinstance(c,dict):
+
+                data.append({
+                    "open":float(c["open"]),
+                    "high":float(c["high"]),
+                    "low":float(c["low"]),
+                    "close":float(c["close"]),
+                    "volume":float(c.get("volume",0))
+                })
+
+
+            elif isinstance(c,(list,tuple)):
+
+                data.append({
+                    "open":float(c[1]),
+                    "high":float(c[2]),
+                    "low":float(c[3]),
+                    "close":float(c[4]),
+                    "volume":float(c[5]) if len(c)>5 else 0
+                })
+
+
+        except:
+
+            continue
+
+
+
+    if len(data)<10:
+
+        return {
+            "engine":"ORDER BLOCK ENGINE v18000",
+            "order_blocks_found":0,
+            "institutional_order_blocks":0,
+            "top_order_blocks":[]
+        }
+
+
+
+    avg_volume=sum(
+        x["volume"]
+        for x in data
+    )/len(data)
+
+
+
+    blocks=[]
+
+
+
+    for i in range(2,len(data)-2):
+
+        ob=data[i-2]
+
+        impulse=data[i-1]
+
+        confirm=data[i]
+
+
+
+        move=abs(
+            impulse["close"]-
+            impulse["open"]
+        )
+
+
+        candle_range=(
+            impulse["high"]-
+            impulse["low"]
+        )
+
+
+        if candle_range<=0:
+            continue
+
+
+        displacement=move/candle_range
+
+
+
+        score=0
+
+        reasons=[]
+
+        direction=None
+
+
+
+        # LONG OB
+
+        if (
+
+            ob["close"] < ob["open"]
+
+            and
+
+            impulse["close"] > impulse["open"]
+
+            and
+
+            impulse["close"] >= ob["close"]
+
+        ):
+
+            direction="LONG"
+
+            score=70
+
+            reasons.append(
+                "BULLISH ORDER BLOCK"
+            )
+
+
+
+            if displacement>=0.25:
+
+                score+=10
+
+                reasons.append(
+                    "DISPLACEMENT"
+                )
+
+
+
+            if confirm["close"] > impulse["high"]:
+
+                score+=10
+
+                reasons.append(
+                    "BOS"
+                )
+
+
+
+            if impulse["volume"]>=avg_volume:
+
+                score+=10
+
+                reasons.append(
+                    "VOLUME"
+                )
+
+
+
+
+        # SHORT OB
+
+        if (
+
+            ob["close"] > ob["open"]
+
+            and
+
+            impulse["close"] < impulse["open"]
+
+            and
+
+            impulse["close"] <= ob["close"]
+
+        ):
+
+
+            direction="SHORT"
+
+            score=70
+
+
+            reasons.append(
+                "BEARISH ORDER BLOCK"
+            )
+
+
+            if displacement>=0.25:
+
+                score+=10
+
+                reasons.append(
+                    "DISPLACEMENT"
+                )
+
+
+
+            if confirm["close"] < impulse["low"]:
+
+                score+=10
+
+                reasons.append(
+                    "BOS"
+                )
+
+
+
+            if impulse["volume"]>=avg_volume:
+
+                score+=10
+
+                reasons.append(
+                    "VOLUME"
+                )
+
+
+
+        if direction:
+
+
+            blocks.append({
+
+                "direction":direction,
+
+                "zone":[
+                    round(ob["low"],4),
+                    round(ob["high"],4)
+                ],
+
+                "score":min(
+                    score,
+                    100
+                ),
+
+                "quality":
+                (
+                    "INSTITUTIONAL"
+                    if score>=85
+                    else
+                    "HIGH"
+                ),
+
+                "reasons":reasons
+
+            })
+
+
+
+    blocks.sort(
+        key=lambda x:x["score"],
+        reverse=True
+    )
+
+
+
+    return {
+
+        "engine":
+        "ORDER BLOCK ENGINE v18000",
+
+        "order_blocks_found":
+        len(blocks),
+
+        "institutional_order_blocks":
+        len(
+            [
+                x for x in blocks
+                if x["score"]>=85
+            ]
+        ),
+
+        "top_order_blocks":
+        blocks[:10]
+
+    }
+
+
+
+# compatibility
+
+order_block_engine_v17000 = order_block_engine_v18000
+order_block_engine_v15800 = order_block_engine_v18000
+
+def entry_quality_engine_v16200(candles):
+
+    from app.services.smart_money.order_block_engine import order_block_engine_v17000
+
+
+    ob_result = order_block_engine_v17000(candles)
+
+    blocks = ob_result.get(
+        "top_order_blocks",
+        []
+    )
+
+
+    current = candles[-1]
+
+
+    if isinstance(current, dict):
+        current_price = float(current["close"])
+    else:
+        current_price = float(current[4])
+
+
+    if not blocks:
+
+        return {
+            "engine":"ENTRY QUALITY ENGINE v16200",
+            "error":"NO ORDER BLOCKS",
+            "current_price":current_price
+        }
+
+
+    equilibrium = ob_result.get(
+        "equilibrium",
+        current_price
+    )
+
+
+    setups=[]
+
+
+    for b in blocks:
+
+        zone=b.get("zone")
+
+        if not zone:
+            continue
+
+
+        low=float(zone[0])
+        high=float(zone[1])
+
+        center=(low+high)/2
+
+
+        distance_percent=round(
+            abs(current_price-center)
+            /
+            current_price
+            *
+            100,
+            2
+        )
+
+
+        score=int(
+            b.get(
+                "score",
+                0
+            )
+        )
+
+
+        reasons=list(
+            b.get(
+                "reasons",
+                []
+            )
+        )
+
+
+        location="DISCOUNT" if center < equilibrium else "PREMIUM"
+
+
+        direction=b.get(
+            "direction"
+        )
+
+
+        if direction=="LONG" and location=="DISCOUNT":
+
+            score+=10
+            reasons.append(
+                "DISCOUNT LONG"
+            )
+
+
+        if direction=="SHORT" and location=="PREMIUM":
+
+            score+=10
+            reasons.append(
+                "PREMIUM SHORT"
+            )
+
+
+        if distance_percent<=0.5:
+
+            score+=10
+            reasons.append(
+                "NEAR ENTRY"
+            )
+
+
+        score=max(
+            0,
+            min(
+                score,
+                100
+            )
+        )
+
+
+        quality=(
+
+            "A+"
+
+            if score>=90
+
+            else
+
+            "A"
+
+            if score>=80
+
+            else
+
+            "B"
+
+        )
+
+
+        setups.append({
+
+            "direction":direction,
+
+            "zone":zone,
+
+            "score":score,
+
+            "quality":quality,
+
+            "distance":distance_percent,
+
+            "location":location,
+
+            "reasons":reasons
+
+        })
+
+
+    setups=sorted(
+        setups,
+        key=lambda x:x["score"],
+        reverse=True
+    )
+
+
+    return {
+
+        "engine":"ENTRY QUALITY ENGINE v16200",
+
+        "current_price":current_price,
+
+        "best_setup":setups[0],
+
+        "setups":setups[:10]
+
+    }
+from datetime import datetime
+
+
+class EntryPredictor:
+
+
+    def predict(self, features, strategy):
+
+        price = float(
+            features.get(
+                "close",
+                0
+            )
+        )
+
+        rsi = features.get("rsi",50)
+        macd = features.get("macd",0)
+        trend = features.get("trend","UNKNOWN")
+        atr = features.get(
+            "atr",
+            price * 0.01
+        )
+
+
+        signal = strategy.get(
+            "signal",
+            "WAIT"
+        )
+
+
+        score = 50
+        reasons = []
+
+
+        if trend == "BEARISH":
+
+            score += 15
+
+            reasons.append(
+                "Bearish trend confirmation"
+            )
+
+
+        if trend == "BULLISH":
+
+            score += 15
+
+            reasons.append(
+                "Bullish trend confirmation"
+            )
+
+
+        if macd < 0:
+
+            score += 10
+
+            reasons.append(
+                "MACD bearish pressure"
+            )
+
+
+        if macd > 0:
+
+            score += 10
+
+            reasons.append(
+                "MACD bullish pressure"
+            )
+
+
+        if signal in [
+            "LONG",
+            "SHORT"
+        ]:
+
+            score += 15
+
+            reasons.append(
+                "Strategy confirmation"
+            )
+
+
+        confidence = min(
+            score,
+            95
+        )
+
+
+        best_setup = {}
+
+        if isinstance(strategy, dict):
+            final_engine = strategy.get("FINAL_ENGINE", {})
+            best_setup = final_engine.get("best_setup", {})
+
+
+        if best_setup.get("zone"):
+
+            entry_from = best_setup["zone"][0]
+            entry_to = best_setup["zone"][1]
+
+            direction = best_setup.get("direction", signal)
+
+            if direction == "LONG":
+                stop = entry_from - atr*2
+                target = entry_to + atr*3
+
+            else:
+                stop = entry_to + atr*2
+                target = entry_from - atr*3
+
+
+        elif signal == "LONG":
+
+            entry_from = price - atr*0.3
+            entry_to = price + atr*0.2
+
+            stop = price - atr*2
+            target = price + atr*3
+
+
+        elif signal == "SHORT":
+
+            entry_from = price - atr*0.2
+            entry_to = price + atr*0.3
+
+            stop = price + atr*2
+            target = price - atr*3
+
+
+        else:
+
+            entry_from = price
+            entry_to = price
+
+            stop = 0
+            target = 0
+
+
+
+        if confidence >= 75:
+
+            status="READY"
+
+        elif confidence >=55:
+
+            status="WATCH"
+
+        else:
+
+            status="WAIT"
+
+
+
+        return {
+
+            "status": status,
+
+            "direction": signal,
+
+            "confidence": confidence,
+
+            "time_window":
+                "10-15 minutes",
+
+            "entry_zone":
+            {
+                "from":
+                    round(entry_from,2),
+
+                "to":
+                    round(entry_to,2)
+            },
+
+
+            "stop_loss":
+                round(stop,2),
+
+
+            "take_profit":
+                round(target,2),
+
+
+            "risk_reward":
+                1.5,
+
+
+            "reasons":
+                reasons,
+
+
+            "created":
+                datetime.now().strftime(
+                    "%H:%M:%S"
+                )
+
+        }
+from app.services.indicator_engine import IndicatorEngine
+from app.services.score_engine import ScoreEngine
+from app.services.entry_predictor import EntryPredictor
+from app.services.smart_money_engine import SmartMoneyEngine
+
+
+class MarketAnalyzer:
+
+
+    def __init__(self):
+
+        self.indicators = IndicatorEngine()
+
+        self.score = ScoreEngine()
+
+        self.predictor = EntryPredictor()
+
+        self.smart_money = SmartMoneyEngine()
+
+
+
+    def analyze(self, candles):
+
+
+        print(":", len(candles))
+
+
+        features = self.indicators.analyze(candles)
+
+        if "indicator_score" not in features:
+            features["indicator_score"] = 0
+
+        smart_money = self.smart_money.analyze(candles)
+
+        try:
+
+            final_smc = self.smart_money.final_entry_model(candles)
+
+            smart_money["FINAL_ENGINE"] = final_smc
+
+        except Exception as e:
+
+            smart_money["FINAL_ENGINE_ERROR"] = str(e)
+
+
+        print("FEATURES:", features)
+
+
+
+        best_setup = final_smc.get("best_setup", {}) if isinstance(final_smc, dict) else {}
+
+        result = {
+            "direction": best_setup.get("direction", "NONE"),
+            "score": best_setup.get("score", 0),
+            "confidence": best_setup.get("score", 0),
+            "entry_zone": best_setup.get("zone"),
+            "quality": best_setup.get("quality"),
+            "reasons": best_setup.get("reasons", [])
+        }
+
+
+
+        if isinstance(result, tuple):
+
+            score = result[0]
+
+            reasons = result[1]
+
+        else:
+
+            score = result.get(
+                "score",
+                0
+            )
+
+            reasons = result.get(
+                "reasons",
+                []
+            )
+
+
+
+        rsi = features.get(
+            "rsi",
+            50
+        )
+
+        macd = features.get(
+            "macd",
+            0
+        )
+
+        trend = features.get(
+            "trend",
+            ""
+        )
+
+        momentum = features.get(
+            "momentum",
+            0
+        )
+
+
+
+        price = self.get_price(
+            candles
+        )
+
+
+        vwap = features.get(
+            "vwap",
+            price
+        )
+
+
+        atr = features.get(
+            "atr",
+            price * 0.01
+        )
+
+
+
+        signal = "WAIT"
+
+
+
+        if (
+
+            trend == "BEARISH"
+
+            and macd < 0
+
+            and momentum < 0
+
+            and price < vwap
+
+        ):
+
+            signal = "SHORT"
+
+
+            reasons.append(
+                "Bearish trend confirmation"
+            )
+
+
+            if rsi < 30:
+
+                reasons.append(
+                    "RSI oversold warning"
+                )
+
+
+
+        elif (
+
+            trend == "BULLISH"
+
+            and macd > 0
+
+            and momentum > 0
+
+            and price > vwap
+
+        ):
+
+            signal = "LONG"
+
+
+            reasons.append(
+                "Bullish trend confirmation"
+            )
+
+
+
+        confidence = min(
+            100,
+            max(
+                0,
+                score
+            )
+        )
+
+
+
+        strategy = {
+
+            "signal": signal,
+
+            "score": score,
+
+            "confidence": confidence,
+
+            "reasons": list(
+                set(reasons)
+            )
+
+        }
+
+
+
+        if isinstance(strategy, dict):
+            strategy["FINAL_ENGINE"] = final_smc
+
+
+        prediction = self.predictor.predict(
+
+            {
+
+                "close": price,
+
+                "rsi": rsi,
+
+                "macd": macd,
+
+                "trend": trend,
+
+                "atr": atr
+
+            },
+
+            strategy
+
+        )
+
+
+
+        trade = {
+
+
+            "status":
+
+                prediction["status"],
+
+
+            "direction":
+
+                prediction["direction"],
+
+
+            "entry_zone":
+
+                prediction["entry_zone"],
+
+
+            "stop_loss":
+
+                prediction["stop_loss"],
+
+
+            "take_profit":
+
+                prediction["take_profit"],
+
+
+            "risk_reward":
+
+                prediction["risk_reward"],
+
+
+            "confidence":
+
+                prediction["confidence"],
+
+
+            "time_window":
+
+                prediction["time_window"]
+
+        }
+
+
+
+        return {
+
+
+            "smart_money": smart_money,
+
+            "features": features,
+
+
+            "strategy":
+
+                strategy,
+
+
+            "structure":{
+
+
+                "trend":
+
+                    trend,
+
+
+                "rsi":
+
+                    rsi,
+
+
+                "macd":
+
+                    macd
+
+            },
+
+
+            "ranking":
+
+                strategy,
+
+
+            "entry":
+
+            {
+
+                "price":
+
+                    price
+
+            },
+
+
+            "prediction":
+
+                prediction,
+
+
+            "trade_plan":
+
+                trade
+
+        }
+
+
+
+
+    def get_price(self,candles):
+
+
+        last = candles[-1]
+
+
+        if isinstance(
+            last,
+            dict
+        ):
+
+            return float(
+                last["close"]
+            )
+
+
+        return float(
+            last[4]
+        )
+from typing import Dict, List
+
+from app.services.smart_money.confluence_engine import ConfluenceEngine
+from app.services.smart_money.direction_engine import DirectionEngine
+from app.services.smart_money.reversal_engine import ReversalEngine
+from app.services.smart_money.volume_engine import VolumeEngine
+from app.services.smart_money.range_engine import RangeEngine
+from app.services.smart_money.volatility_engine import VolatilityEngine
+from app.services.smart_money.candle_engine import CandleEngine
+from app.services.smart_money.liquidity_engine import analyze_liquidity
+from app.services.smart_money.equal_highs_engine import equal_highs_engine_v1300
+
+try:
+    from app.services.smart_money.structure_engine import StructureEngine
+except:
+    StructureEngine = None
+
+try:
+    from app.services.smart_money.liquidity_engine import LiquidityEngine
+except:
+    LiquidityEngine = None
+
+try:
+    from app.services.smart_money.fvg_engine import FVGEngine
+except:
+    FVGEngine = None
+
+try:
+    from app.services.smart_money.order_block_engine import OrderBlockEngine
+except:
+    OrderBlockEngine = None
+
+try:
+    from app.services.smart_money.zone_engine import ZoneEngine
+except:
+    ZoneEngine = None
+
+try:
+    from app.services.smart_money.breakout_engine import BreakoutEngine
+except:
+    BreakoutEngine = None
+
+try:
+    from app.services.smart_money.premium_discount_engine import PremiumDiscountEngine
+except:
+    PremiumDiscountEngine = None
+
+
+class SmartMoneyEngine:
+
+    def __init__(self):
+
+        self.confluence = ConfluenceEngine()
+        self.direction = DirectionEngine()
+
+        self.reversal = ReversalEngine()
+        self.volume = VolumeEngine()
+        self.candle = CandleEngine()
+        self.range = RangeEngine()
+        self.volatility = VolatilityEngine()
+
+        self.structure = StructureEngine() if StructureEngine else None
+        self.liquidity = LiquidityEngine() if LiquidityEngine else None
+        self.fvg = FVGEngine() if FVGEngine else None
+        self.order_block = OrderBlockEngine() if OrderBlockEngine else None
+        self.zone = ZoneEngine() if ZoneEngine else None
+        self.breakout = BreakoutEngine() if BreakoutEngine else None
+        self.premium_discount = PremiumDiscountEngine() if PremiumDiscountEngine else None
+
+
+    def safe_analyze(self, engine, candles):
+
+        if engine is None:
+            return {}
+
+        try:
+            return engine.analyze(candles)
+
+        except Exception as e:
+            return {
+                "error": str(e)
+            }
+
+
+    def analyze(self, candles):
+        return self.modular_analysis(candles)
+
+
+    def modular_analysis(self, candles: List[Dict]) -> Dict:
+
+        liquidity = analyze_liquidity(candles)
+
+        # ===============================
+        # EQUAL HIGH SWEEP CONNECTION
+        # ===============================
+
+        equal_high_sweep = equal_highs_engine_v1300(candles)
+
+        if equal_high_sweep.get("equal_high_sweep"):
+            liquidity["score"] = liquidity.get("score",0) + equal_high_sweep.get("score",0)
+
+            liquidity.setdefault(
+                "reasons",
+                []
+            ).extend(
+                equal_high_sweep.get("reasons",[])
+            )
+
+        if equal_high_sweep.get("short_confirmation"):
+            liquidity["direction"] = "SHORT"
+
+
+
+        
+        # ===============================
+        # LIQUIDITY SWEEP SIGNAL BOOST
+        # ===============================
+
+        liquidity_score = liquidity.get("score", 0)
+
+        if liquidity.get("liquidity_sweep"):
+            liquidity_score += 20
+            liquidity.setdefault("reasons", []).append(
+                "LIQUIDITY SWEEP CONFIRMED"
+            )
+
+        if liquidity.get("stop_hunt"):
+            liquidity_score += 15
+            liquidity.setdefault("reasons", []).append(
+                "STOP HUNT CONFIRMED"
+            )
+
+        if liquidity.get("liquidity_grab"):
+            liquidity_score += 10
+            liquidity.setdefault("reasons", []).append(
+                "LIQUIDITY GRAB CONFIRMED"
+            )
+
+        if liquidity.get("return_after_sweep"):
+            liquidity_score += 10
+            liquidity.setdefault("reasons", []).append(
+                "RETURN AFTER SWEEP"
+            )
+
+        liquidity["score"] = liquidity_score
+
+
+
+        modules = {}
+
+        modules["structure"] = self.safe_analyze(
+            self.structure,
+            candles
+        )
+
+        modules["liquidity"] = liquidity
+
+        modules["fvg"] = self.safe_analyze(
+            self.fvg,
+            candles
+        )
+
+        modules["order_block"] = self.safe_analyze(
+            self.order_block,
+            candles
+        )
+
+        modules["zone"] = self.safe_analyze(
+            self.zone,
+            candles
+        )
+
+        modules["breakout"] = self.safe_analyze(
+            self.breakout,
+            candles
+        )
+
+        modules["premium_discount"] = self.safe_analyze(
+            self.premium_discount,
+            candles
+        )
+
+
+        modules["reversal"] = self.safe_analyze(
+            self.reversal,
+            candles
+        )
+
+        modules["volume"] = self.safe_analyze(
+            self.volume,
+            candles
+        )
+
+        modules["volatility"] = self.safe_analyze(
+            self.volatility,
+            candles
+        )
+
+        modules["candle"] = self.safe_analyze(
+            self.candle,
+            candles
+        )
+
+        modules["range"] = self.safe_analyze(
+            self.range,
+            candles
+        )
+
+
+        confluence = self.confluence.analyze(
+            modules
+        )
+
+
+        direction = self.direction.analyze(
+            modules,
+            confluence.get("score",0)
+        )
+
+
+        confluence["direction"] = direction.get(
+            "direction"
+        )
+
+        confluence["confidence"] = direction.get(
+            "confidence",
+            0
+        )
+
+        confidence = direction.get(
+            "confidence",
+            0
+        )
+
+        try:
+            confidence = int(confidence)
+        except:
+            confidence = 0
+
+        try:
+            confidence = int(confidence)
+        except:
+            confidence = 0
+
+        if confidence >= 85:
+            grade = "A+ SETUP"
+        elif confidence >= 70:
+            grade = "A SETUP"
+        elif confidence >= 55:
+            grade = "B SETUP"
+        else:
+            grade = "LOW QUALITY"
+
+        confluence["grade"] = grade
+
+
+        if direction.get("reasons"):
+
+            confluence.setdefault(
+                "reasons",
+                []
+            )
+
+            confluence["reasons"].extend(
+                direction["reasons"]
+            )
+
+
+
+        confluence["confidence"] = int(
+            confluence.get("score", 0)
+        )
+
+        if confluence["confidence"] >= 85:
+            confluence["grade"] = "A+ SETUP"
+        elif confluence["confidence"] >= 70:
+            confluence["grade"] = "A SETUP"
+        elif confluence["confidence"] >= 55:
+            confluence["grade"] = "B SETUP"
+        else:
+            confluence["grade"] = "LOW QUALITY"
+
+
+        # ===============================
+        # FINAL SIGNAL VALIDATOR
+        # ===============================
+
+        pd = modules.get("premium_discount", {})
+
+        if confluence.get("direction") == "LONG":
+
+            if pd.get("long_valid") is False:
+                confluence["grade"] = "FILTERED"
+                confluence["reasons"].append(
+                    "LONG BLOCKED: PREMIUM ZONE"
+                )
+                confluence["trade_allowed"] = False
+                confluence["grade"] = "FILTERED"
+
+        elif confluence.get("direction") == "SHORT":
+
+            if pd.get("short_valid") is False:
+                confluence["grade"] = "FILTERED"
+                confluence["reasons"].append(
+                    "SHORT BLOCKED: DISCOUNT ZONE"
+                )
+                confluence["trade_allowed"] = False
+                confluence["grade"] = "FILTERED"
+
+
+        # ===============================
+        # SIGNAL QUALITY ENGINE
+        # ===============================
+
+        raw_score = int(
+            confluence.get("score", 0)
+        )
+
+        quality = min(
+            100,
+            max(
+                0,
+                raw_score
+            )
+        )
+
+        confluence["quality"] = quality
+
+        if quality >= 90:
+            confluence["grade"] = "A+"
+        elif quality >= 75:
+            confluence["grade"] = "A"
+        elif quality >= 60:
+            confluence["grade"] = "B"
+        elif quality >= 40:
+            confluence["grade"] = "WEAK"
+        else:
+            confluence["grade"] = "BAD"
+
+        # FINAL TRADE PERMISSION
+
+        if confluence["grade"] == "FILTERED":
+            confluence["trade_allowed"] = False
+        else:
+            confluence["trade_allowed"] = True
+
+        confluence["modules"] = modules
+
+
+
+        # ===============================
+        # FINAL OVERRIDE CHECK
+        # ===============================
+
+        if any(
+            "BLOCKED" in reason
+            for reason in confluence.get("reasons", [])
+        ):
+            confluence["trade_allowed"] = False
+            confluence["grade"] = "FILTERED"
+
+        return confluence
+
+
+
+
+    def final_entry_model(self, candles):
+
+        from app.services.smart_money.entry_quality_engine import entry_quality_engine_v16200
+
+        try:
+            return entry_quality_engine_v16200(candles)
+
+        except Exception as e:
+            return {
+                "engine":"FINAL ENTRY MODEL",
+                "error":str(e)
+            }
+

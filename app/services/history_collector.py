@@ -1,4 +1,4 @@
-﻿from app.exchange.bybit_client import BybitClient
+from app.exchange.bybit_client import BybitClient
 from app.storage.data_storage import DataStorage
 import time
 

@@ -1,4 +1,4 @@
-﻿class BybitSimulator:
+class BybitSimulator:
 
 
     def __init__(self):

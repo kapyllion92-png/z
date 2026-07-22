@@ -1,4 +1,4 @@
-п»їfrom app.services.strategies.bounce import BounceStrategy
+from app.services.strategies.bounce import BounceStrategy
 from app.services.strategies.breakout import BreakoutStrategy
 from app.services.strategies.fake_breakout import FakeBreakoutStrategy
 from app.services.strategies.volume import VolumeStrategy
@@ -31,22 +31,22 @@ class StrategyEngine:
         names = {
 
             "BOUNCE":
-                "РћС‚Р±РѕР№ РѕС‚ СѓСЂРѕРІРЅСЏ",
+                "Отбой от уровня",
 
             "BREAKOUT":
-                "РџСЂРѕР±РѕР№ РєР»СЋС‡РµРІРѕРіРѕ СѓСЂРѕРІРЅСЏ",
+                "Пробой ключевого уровня",
 
             "FAKE_BREAKOUT":
-                "Р›РѕР¶РЅС‹Р№ РїСЂРѕР±РѕР№ СЃ РІРѕР·РІСЂР°С‚РѕРј",
+                "Ложный пробой с возвратом",
 
             "RANGE_BREAK":
-                "Р’С‹С…РѕРґ РёР· Р·РѕРЅС‹ РєРѕРЅСЃРѕР»РёРґР°С†РёРё",
+                "Выход из зоны консолидации",
 
             "IMBALANCE":
-                "Р”РёСЃР±Р°Р»Р°РЅСЃ СЃРїСЂРѕСЃР° Рё РїСЂРµРґР»РѕР¶РµРЅРёСЏ",
+                "Дисбаланс спроса и предложения",
 
             "VOLUME":
-                "РћР±СЉС‘РјРЅРѕРµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ РґРІРёР¶РµРЅРёСЏ"
+                "Объёмное подтверждение движения"
         }
 
 
@@ -73,27 +73,27 @@ class StrategyEngine:
 
                     if "BREAK" in r:
                         reasons.append(
-                            "РџСЂРѕР±РѕР№ РІР°Р¶РЅРѕРіРѕ СѓСЂРѕРІРЅСЏ"
+                            "Пробой важного уровня"
                         )
 
                     elif "VOLUME" in r:
                         reasons.append(
-                            "РћР±СЉС‘Рј РїРѕРґС‚РІРµСЂРґРёР» РґРІРёР¶РµРЅРёРµ"
+                            "Объём подтвердил движение"
                         )
 
                     elif "IMBALANCE" in r:
                         reasons.append(
-                            "РЎС„РѕСЂРјРёСЂРѕРІР°РЅ РґРёСЃР±Р°Р»Р°РЅСЃ РїРѕРєСѓРїР°С‚РµР»РµР№ Рё РїСЂРѕРґР°РІС†РѕРІ"
+                            "Сформирован дисбаланс покупателей и продавцов"
                         )
 
                     elif "RANGE" in r:
                         reasons.append(
-                            "Р¦РµРЅР° РІС‹С€Р»Р° РёР· Р·РѕРЅС‹ РЅР°РєРѕРїР»РµРЅРёСЏ"
+                            "Цена вышла из зоны накопления"
                         )
 
                     elif "PRESSURE" in r:
                         reasons.append(
-                            "РЈСЃРёР»РµРЅРёРµ РґР°РІР»РµРЅРёСЏ СѓС‡Р°СЃС‚РЅРёРєРѕРІ СЂС‹РЅРєР°"
+                            "Усиление давления участников рынка"
                         )
 
 
@@ -140,7 +140,7 @@ class StrategyEngine:
             "strategy_name":
                 ", ".join(unique_strategies)
                 if unique_strategies
-                else "РљРѕРјРїР»РµРєСЃРЅС‹Р№ СЃРёРіРЅР°Р»",
+                else "Комплексный сигнал",
 
             "strategies":
                 unique_strategies,

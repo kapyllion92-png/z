@@ -1,4 +1,4 @@
-п»їclass SweepDetector:
+class SweepDetector:
 
 
     def analyze(
@@ -34,7 +34,7 @@
 
 
         # BUY SIDE LIQUIDITY
-        # РЎРЅСЏС‚РёРµ СЂР°РІРЅС‹С… РјР°РєСЃРёРјСѓРјРѕРІ
+        # Снятие равных максимумов
 
         for pool in liquidity.get(
             "equal_highs",
@@ -63,7 +63,7 @@
 
 
         # SELL SIDE LIQUIDITY
-        # РЎРЅСЏС‚РёРµ СЂР°РІРЅС‹С… РјРёРЅРёРјСѓРјРѕРІ
+        # Снятие равных минимумов
 
         for pool in liquidity.get(
             "equal_lows",

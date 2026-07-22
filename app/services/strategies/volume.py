@@ -1,4 +1,4 @@
-п»їclass VolumeStrategy:
+class VolumeStrategy:
 
     def analyze(self, features):
 
@@ -50,7 +50,7 @@
 
 
 
-        # СЃРёР»СЊРЅС‹Р№ РѕР±СЉС‘Рј
+        # сильный объём
 
         if volume_ratio > 2:
 
@@ -71,7 +71,7 @@
 
 
 
-        # РЅР°РїСЂР°РІР»РµРЅРёРµ РґРІРёР¶РµРЅРёСЏ
+        # направление движения
 
         price_change = (
             closes[-1] - closes[-2]

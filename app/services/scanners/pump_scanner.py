@@ -1,4 +1,4 @@
-п»їfrom app.services.signal import Signal
+from app.services.signal import Signal
 
 
 class PumpScanner:
@@ -64,7 +64,7 @@ class PumpScanner:
                 strength += 30
 
                 reasons.append(
-                    "Р РѕСЃС‚ Р±РѕР»РµРµ 3%"
+                    "Рост более 3%"
                 )
 
 
@@ -73,7 +73,7 @@ class PumpScanner:
                 strength += 25
 
                 reasons.append(
-                    "РџРѕРІС‹С€РµРЅРЅС‹Р№ РѕР±СЉС‘Рј"
+                    "Повышенный объём"
                 )
 
 
@@ -82,7 +82,7 @@ class PumpScanner:
                 strength += 20
 
                 reasons.append(
-                    "РџРѕСЏРІРёР»СЃСЏ РїСЂРѕРґР°РІРµС† РїРѕСЃР»Рµ РїР°РјРїР°"
+                    "Появился продавец после пампа"
                 )
 
 
@@ -112,7 +112,7 @@ class PumpScanner:
                 ),
 
                 setup=
-                "РЎРЅР°Р№РїРµСЂ: РѕС‚СЃРєРѕРє РїРѕСЃР»Рµ РїР°РјРїР°",
+                "Снайпер: отскок после пампа",
 
                 reasons=reasons,
 
@@ -134,13 +134,13 @@ class PumpScanner:
                 profit="3%",
 
                 decision=
-                "РњРћР–РќРћ Р“РћРўРћР’РРўР¬ Р’РҐРћР”"
+                "МОЖНО ГОТОВИТЬ ВХОД"
                 if strength >= 75
                 else
-                "РќРђР‘Р›Р®Р”РђРўР¬",
+                "НАБЛЮДАТЬ",
 
                 waiting=
-                "15-25 РјРёРЅСѓС‚"
+                "15-25 минут"
 
             )
 

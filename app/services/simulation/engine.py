@@ -1,4 +1,4 @@
-﻿from app.services.simulation.paper_trader import PaperTrader
+from app.services.simulation.paper_trader import PaperTrader
 
 
 trader = PaperTrader()

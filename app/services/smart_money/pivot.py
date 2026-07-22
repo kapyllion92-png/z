@@ -1,4 +1,4 @@
-﻿class PivotDetector:
+class PivotDetector:
 
     def find_pivots(self, candles, left=2, right=2):
 

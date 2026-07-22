@@ -1,4 +1,4 @@
-﻿import pandas as pd
+import pandas as pd
 
 def detect_swings(df, left=3, right=3):
     highs = []

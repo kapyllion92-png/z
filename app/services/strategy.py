@@ -1,4 +1,4 @@
-﻿class Strategy:
+class Strategy:
 
 
     def analyze(self, features):

@@ -1,4 +1,4 @@
-п»їclass LiquidityEngine:
+class LiquidityEngine:
 
 
     def find_equal_highs(
@@ -103,7 +103,7 @@
             level = pool["price"]
 
 
-            # СЃРЅСЏС‚РёРµ РІРµСЂС…РЅРµР№ Р»РёРєРІРёРґРЅРѕСЃС‚Рё
+            # снятие верхней ликвидности
 
             if (
                 pool["side"] == "BUY_SIDE_LIQUIDITY"
@@ -126,7 +126,7 @@
 
 
 
-            # СЃРЅСЏС‚РёРµ РЅРёР¶РЅРµР№ Р»РёРєРІРёРґРЅРѕСЃС‚Рё
+            # снятие нижней ликвидности
 
             if (
                 pool["side"] == "SELL_SIDE_LIQUIDITY"

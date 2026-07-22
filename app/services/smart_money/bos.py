@@ -1,4 +1,4 @@
-﻿class BOSEngine:
+class BOSEngine:
 
 
     def analyze(

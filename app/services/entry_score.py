@@ -1,4 +1,4 @@
-﻿class EntryScore:
+class EntryScore:
 
 
     def calculate(self, features):

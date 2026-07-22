@@ -1,9 +1,9 @@
-﻿from app.services.smart_money.pivot import PivotDetector
+from app.services.smart_money.pivot import PivotDetector
 from app.services.smart_money.bos import BOSEngine
 from app.services.smart_money.choch import CHoCHEngine
 from app.services.smart_money.liquidity import LiquidityEngine
 from app.services.smart_money.sweep import SweepDetector
-from app.services.smart_money.order_block import OrderBlockDetector
+from app.services.smart_money.order_block_engine import order_block_engine_v17000
 
 
 
@@ -22,7 +22,7 @@ class StructureAnalyzer:
 
         self.sweep = SweepDetector()
 
-        self.order_block = OrderBlockDetector()
+        self.order_block = order_block_engine_v17000
 
 
 

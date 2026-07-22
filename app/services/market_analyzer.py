@@ -1,346 +1,121 @@
-from app.services.indicator_engine import IndicatorEngine
-from app.services.score_engine import ScoreEngine
-from app.services.entry_predictor import EntryPredictor
-from app.services.smart_money_engine import SmartMoneyEngine
+﻿from typing import Dict
 
 
 class MarketAnalyzer:
 
-
     def __init__(self):
-
-        self.indicators = IndicatorEngine()
-
-        self.score = ScoreEngine()
-
-        self.predictor = EntryPredictor()
-
-        self.smart_money = SmartMoneyEngine()
-
+        pass
 
 
     def analyze(self, candles):
 
+        result = {}
 
-        print(":", len(candles))
+        market = {}
 
+        final_smc = {
+            "engine": "SMART MONEY DEFAULT",
+            "error": "NOT INITIALIZED",
+            "best_setup": {},
+            "setups": []
+        }
 
-        features = self.indicators.analyze(candles)
-
-        if "indicator_score" not in features:
-            features["indicator_score"] = 0
-
-        smart_money = self.smart_money.analyze(candles)
 
         try:
+            from app.services.market_analyzer import MarketAnalyzer
 
-            final_smc = self.smart_money.final_entry_model(candles)
+        except:
+            pass
 
-            smart_money["FINAL_ENGINE"] = final_smc
+
+        try:
+            from app.services.smart_money.smart_money_fusion_engine import SmartMoneyFusionEngine
+
+            smc = SmartMoneyFusionEngine()
+            final_smc = smc.analyze(candles)
 
         except Exception as e:
 
-            smart_money["FINAL_ENGINE_ERROR"] = str(e)
+            final_smc = {
+                "engine": "SMART MONEY ERROR",
+                "error": str(e),
+                "best_setup": {},
+                "setups": []
+            }
 
 
-        print("FEATURES:", features)
+        try:
+            from app.services.indicator_engine import IndicatorEngine
+
+            market = IndicatorEngine().analyze(candles)
+
+        except Exception:
+
+            market = {}
 
 
+        best_setup = {}
 
-        result = self.score.calculate(
-            features,
-            [],
-            0
-        )
+        if isinstance(final_smc, dict):
+            best_setup = final_smc.get("best_setup", {})
 
 
+        result["MARKET"] = market
 
-        if isinstance(result, tuple):
+        result["SMART_MONEY"] = final_smc
 
-            score = result[0]
 
-            reasons = result[1]
+        result["FINAL_ENGINE"] = final_smc
 
-        else:
 
-            score = result.get(
+        result["SIGNAL"] = {
+
+            "direction": best_setup.get("direction"),
+
+            "score": best_setup.get("score", 0),
+
+            "confidence": best_setup.get("score", 0)
+
+        }
+
+
+        result["ENTRY"] = {
+
+            "price": candles[-1]["close"]
+
+        }
+
+
+        result["TRADE_PLAN"] = {
+
+            "STATUS": "WAIT",
+
+            "DIRECTION": best_setup.get(
+                "direction",
+                "NONE"
+            ),
+
+            "ENTRY_ZONE": best_setup.get(
+                "zone",
+                {}
+            ),
+
+            "STOP_LOSS": best_setup.get(
+                "stop_loss"
+            ),
+
+            "TAKE_PROFIT": best_setup.get(
+                "take_profit"
+            ),
+
+            "RISK_REWARD": 1.5,
+
+            "CONFIDENCE": best_setup.get(
                 "score",
                 0
             )
 
-            reasons = result.get(
-                "reasons",
-                []
-            )
-
-
-
-        rsi = features.get(
-            "rsi",
-            50
-        )
-
-        macd = features.get(
-            "macd",
-            0
-        )
-
-        trend = features.get(
-            "trend",
-            ""
-        )
-
-        momentum = features.get(
-            "momentum",
-            0
-        )
-
-
-
-        price = self.get_price(
-            candles
-        )
-
-
-        vwap = features.get(
-            "vwap",
-            price
-        )
-
-
-        atr = features.get(
-            "atr",
-            price * 0.01
-        )
-
-
-
-        signal = "WAIT"
-
-
-
-        if (
-
-            trend == "BEARISH"
-
-            and macd < 0
-
-            and momentum < 0
-
-            and price < vwap
-
-        ):
-
-            signal = "SHORT"
-
-
-            reasons.append(
-                "Bearish trend confirmation"
-            )
-
-
-            if rsi < 30:
-
-                reasons.append(
-                    "RSI oversold warning"
-                )
-
-
-
-        elif (
-
-            trend == "BULLISH"
-
-            and macd > 0
-
-            and momentum > 0
-
-            and price > vwap
-
-        ):
-
-            signal = "LONG"
-
-
-            reasons.append(
-                "Bullish trend confirmation"
-            )
-
-
-
-        confidence = min(
-            100,
-            max(
-                0,
-                score
-            )
-        )
-
-
-
-        strategy = {
-
-            "signal": signal,
-
-            "score": score,
-
-            "confidence": confidence,
-
-            "reasons": list(
-                set(reasons)
-            )
-
         }
 
 
-
-        prediction = self.predictor.predict(
-
-            {
-
-                "close": price,
-
-                "rsi": rsi,
-
-                "macd": macd,
-
-                "trend": trend,
-
-                "atr": atr
-
-            },
-
-            strategy
-
-        )
-
-
-
-        trade = {
-
-
-            "status":
-
-                prediction["status"],
-
-
-            "direction":
-
-                prediction["direction"],
-
-
-            "entry_zone":
-
-                prediction["entry_zone"],
-
-
-            "stop_loss":
-
-                prediction["stop_loss"],
-
-
-            "take_profit":
-
-                prediction["take_profit"],
-
-
-            "risk_reward":
-
-                prediction["risk_reward"],
-
-
-            "confidence":
-
-                prediction["confidence"],
-
-
-            "time_window":
-
-                prediction["time_window"]
-
-        }
-
-
-
-        return {
-
-
-            "smart_money": smart_money,
-
-            "features": features,
-
-
-            "strategy":
-
-                strategy,
-
-
-            "structure":{
-
-
-                "trend":
-
-                    trend,
-
-
-                "rsi":
-
-                    rsi,
-
-
-                "macd":
-
-                    macd
-
-            },
-
-
-            "ranking":
-
-                strategy,
-
-
-            "entry":
-
-            {
-
-                "price":
-
-                    price
-
-            },
-
-
-            "prediction":
-
-                prediction,
-
-
-            "trade_plan":
-
-                trade
-
-        }
-
-
-
-
-    def get_price(self,candles):
-
-
-        last = candles[-1]
-
-
-        if isinstance(
-            last,
-            dict
-        ):
-
-            return float(
-                last["close"]
-            )
-
-
-        return float(
-            last[4]
-        )
+        return result

@@ -1,4 +1,4 @@
-ï»¿class FakeBreakoutStrategy:
+class FakeBreakoutStrategy:
 
     def analyze(self, features):
 
@@ -46,8 +46,8 @@
 
 
 
-        # Ð»Ð¾Ð¶Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¾Ð±Ð¾Ð¹ Ð²Ð²ÐµÑ€Ñ…
-        # Ð²Ñ‹ÑˆÐ»Ð¸ Ð²Ñ‹ÑˆÐµ ÑƒÑ€Ð¾Ð²Ð½Ñ Ð¸ Ð²ÐµÑ€Ð½ÑƒÐ»Ð¸ÑÑŒ Ð½Ð°Ð·Ð°Ð´
+        # ëîæíûé ïðîáîé ââåðõ
+        # âûøëè âûøå óðîâíÿ è âåðíóëèñü íàçàä
 
         if max(closes[-3:]) > previous_high and close < previous_high:
 
@@ -62,7 +62,7 @@
 
 
 
-        # Ð»Ð¾Ð¶Ð½Ñ‹Ð¹ Ð¿Ñ€Ð¾Ð±Ð¾Ð¹ Ð²Ð½Ð¸Ð·
+        # ëîæíûé ïðîáîé âíèç
 
         elif min(closes[-3:]) < previous_low and close > previous_low:
 
@@ -83,7 +83,7 @@
 
 
 
-        # Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¸Ðµ Ð¾Ð±ÑŠÑ‘Ð¼Ð¾Ð¼
+        # ïîäòâåðæäåíèå îáú¸ìîì
 
         if len(volumes) >= 20:
 

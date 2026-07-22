@@ -1,4 +1,4 @@
-﻿class EntryEngine:
+class EntryEngine:
 
 
     def analyze(

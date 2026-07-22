@@ -1,4 +1,4 @@
-﻿from app.config.settings import TRADING_MODE
+from app.config.settings import TRADING_MODE
 
 
 class BybitClient:

@@ -1,4 +1,4 @@
-﻿from app.services.paper.engine import PaperTradingEngine
+from app.services.paper.engine import PaperTradingEngine
 
 
 class PositionMonitor:

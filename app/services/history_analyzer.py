@@ -1,4 +1,4 @@
-п»їimport json
+import json
 import os
 
 
@@ -75,11 +75,11 @@ class HistoryAnalyzer:
 
             return {
 
-                "СЃРѕРІРїР°РґРµРЅРёР№":0,
+                "совпадений":0,
 
-                "РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊ":0,
+                "вероятность":0,
 
-                "РІС‹РІРѕРґ":"РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РёСЃС‚РѕСЂРёРё"
+                "вывод":"Недостаточно истории"
 
             }
 
@@ -98,7 +98,7 @@ class HistoryAnalyzer:
 
 
 
-            if item.get("С‚СЂРµРЅРґ") == current.get("С‚СЂРµРЅРґ"):
+            if item.get("тренд") == current.get("тренд"):
 
                 score += 1
 
@@ -110,7 +110,7 @@ class HistoryAnalyzer:
 
 
 
-            if item.get("РѕР±СЉС‘Рј") == current.get("РѕР±СЉС‘Рј"):
+            if item.get("объём") == current.get("объём"):
 
                 score += 1
 
@@ -122,7 +122,7 @@ class HistoryAnalyzer:
 
 
 
-                if item.get("СЂРµР·СѓР»СЊС‚Р°С‚") == "PROFIT":
+                if item.get("результат") == "PROFIT":
 
                     wins += 1
 
@@ -145,26 +145,26 @@ class HistoryAnalyzer:
         return {
 
 
-            "СЃРѕРІРїР°РґРµРЅРёР№":
+            "совпадений":
 
                 matches,
 
 
-            "РїРѕР±РµРґ":
+            "побед":
 
                 wins,
 
 
-            "РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊ":
+            "вероятность":
 
                 probability,
 
 
-            "РІС‹РІРѕРґ":
+            "вывод":
 
-                "РҐРѕСЂРѕС€РµРµ СЃРѕРІРїР°РґРµРЅРёРµ"
+                "Хорошее совпадение"
                 if probability >= 65
                 else
-                "РЎР»Р°Р±РѕРµ СЃРѕРІРїР°РґРµРЅРёРµ"
+                "Слабое совпадение"
 
         }

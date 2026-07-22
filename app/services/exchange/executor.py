@@ -1,4 +1,4 @@
-﻿from app.services.exchange.bybit_client import BybitClient
+from app.services.exchange.bybit_client import BybitClient
 
 
 class BybitExecutor:

@@ -1,161 +1,113 @@
+from datetime import datetime
+
+
 class StructureEngine:
 
-    def analyze(self, candles):
+    def __init__(self):
+        self.name = "CHoCH ENGINE v4.0"
+
+
+    def analyze(
+        self,
+        previous_high,
+        previous_low,
+        current_high,
+        current_low,
+        volume_ratio=1.0
+    ):
 
         result = {
-            "swing_high": False,
-            "swing_low": False,
-            "higher_high": False,
-            "higher_low": False,
-            "lower_high": False,
-            "lower_low": False,
+            "engine": self.name,
             "bos": False,
             "choch": False,
-            "trend": "NEUTRAL",
+            "direction": "NONE",
             "score": 0,
+            "ready": False,
             "reasons": []
         }
 
 
-        if len(candles) < 10:
-            return result
-
-
-        highs = [c["high"] for c in candles]
-        lows = [c["low"] for c in candles]
-
-
-        prev_high = highs[-3]
-        last_high = highs[-1]
-
-        prev_low = lows[-3]
-        last_low = lows[-1]
-
-
-        # Swing High
-
-        if highs[-2] > highs[-3] and highs[-2] > highs[-1]:
-
-            result["swing_high"] = True
-
-            result["score"] += 5
-
-            result["reasons"].append(
-                "SWING HIGH"
-            )
-
-
-        # Swing Low
-
-        if lows[-2] < lows[-3] and lows[-2] < lows[-1]:
-
-            result["swing_low"] = True
-
-            result["score"] += 5
-
-            result["reasons"].append(
-                "SWING LOW"
-            )
-
-
-        # Higher High
-
-        if last_high > prev_high:
-
-            result["higher_high"] = True
-
-            result["trend"] = "BULLISH"
-
-            result["score"] += 5
-
-            result["reasons"].append(
-                "HIGHER HIGH"
-            )
-
-
-        # Higher Low
-
-        if last_low > prev_low:
-
-            result["higher_low"] = True
-
-            result["trend"] = "BULLISH"
-
-            result["score"] += 5
-
-            result["reasons"].append(
-                "HIGHER LOW"
-            )
-
-
-        # Lower High
-
-        if last_high < prev_high:
-
-            result["lower_high"] = True
-
-            result["trend"] = "BEARISH"
-
-            result["score"] += 5
-
-            result["reasons"].append(
-                "LOWER HIGH"
-            )
-
-
-        # Lower Low
-
-        if last_low < prev_low:
-
-            result["lower_low"] = True
-
-            result["trend"] = "BEARISH"
-
-            result["score"] += 5
-
-            result["reasons"].append(
-                "LOWER LOW"
-            )
-
-
-        # BOS
-
-        if result["higher_high"]:
+        # bullish BOS
+        if current_high > previous_high:
 
             result["bos"] = True
+            result["direction"] = "BULLISH"
 
-            result["score"] += 10
+            result["score"] += 25
 
             result["reasons"].append(
-                "BULLISH BOS"
+                "BULLISH BOS BREAK"
             )
 
 
-        if result["lower_low"]:
+        # bearish BOS
+        elif current_low < previous_low:
 
             result["bos"] = True
+            result["direction"] = "BEARISH"
 
-            result["score"] += 10
+            result["score"] += 25
 
             result["reasons"].append(
-                "BEARISH BOS"
+                "BEARISH BOS BREAK"
             )
 
 
-        # CHoCH
-
+        # bullish CHoCH
         if (
-            result["higher_low"]
+            current_low > previous_low
             and
-            result["lower_high"]
+            current_high > previous_high
         ):
 
             result["choch"] = True
+            result["direction"] = "BULLISH"
+
+            result["score"] += 30
+
+            result["reasons"].append(
+                "BULLISH MARKET STRUCTURE CHoCH"
+            )
+
+
+        # bearish CHoCH
+        if (
+            current_high < previous_high
+            and
+            current_low < previous_low
+        ):
+
+            result["choch"] = True
+            result["direction"] = "BEARISH"
+
+            result["score"] += 30
+
+            result["reasons"].append(
+                "BEARISH MARKET STRUCTURE CHoCH"
+            )
+
+
+        # volume confirmation
+
+        if volume_ratio >= 1.2:
 
             result["score"] += 15
 
             result["reasons"].append(
-                "MARKET STRUCTURE CHoCH"
+                "VOLUME CONFIRMATION"
+            )
+
+
+        # displacement
+
+        move = abs(current_high-current_low)
+
+        if move > abs(previous_high-previous_low):
+
+            result["score"] += 15
+
+            result["reasons"].append(
+                "DISPLACEMENT"
             )
 
 
@@ -163,6 +115,11 @@ class StructureEngine:
             result["score"],
             100
         )
+
+
+        if result["score"] >= 70:
+
+            result["ready"] = True
 
 
         return result

@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 
 class TerminalView:
@@ -11,41 +11,89 @@ class TerminalView:
         print(datetime.now())
         print("=" * 60)
 
+
         print()
         print("MARKET:")
-        print(result.get("features"))
+        print(
+            result.get("features")
+        )
+
 
         print()
         print("SMART MONEY:")
-        print(result.get("smart_money"))
+
+        smart = result.get(
+            "smart_money",
+            result
+        )
+
+        print(smart)
+
+
+        print()
+        print("CHoCH:")
+
+        print(
+            smart.get(
+                "choch"
+            )
+        )
+
+
+        print()
+        print("BOS:")
+
+        print(
+            smart.get(
+                "bos"
+            )
+        )
+
 
         print()
         print("SIGNAL:")
-        strategy = result.get("strategy", {})
-        print(
-            f"{strategy.get('signal')} | "
-            f"SCORE {strategy.get('score')} | "
-            f"CONFIDENCE {strategy.get('confidence')}"
+
+        signal = smart.get(
+            "SIGNAL",
+            {}
         )
+
+        print(
+            f"{signal.get('direction')} | "
+            f"SCORE {signal.get('score')} | "
+            f"CONFIDENCE {signal.get('confidence')}"
+        )
+
 
         print()
         print("ENTRY:")
-        print(result.get("entry"))
+
+        print(
+            smart.get(
+                "ENTRY"
+            )
+        )
+
 
         print()
         print("TRADE PLAN:")
-        plan = result.get("trade_plan", {})
+
+        plan = smart.get(
+            "TRADE_PLAN",
+            {}
+        )
 
         print(
-            f"""
-STATUS: {plan.get('status')}
-DIRECTION: {plan.get('direction')}
-ENTRY ZONE: {plan.get('entry_zone')}
-STOP LOSS: {plan.get('stop_loss')}
-TAKE PROFIT: {plan.get('take_profit')}
-RISK/REWARD: {plan.get('risk_reward')}
-CONFIDENCE: {plan.get('confidence')}%
+f"""
+STATUS: {plan.get('STATUS')}
+DIRECTION: {plan.get('DIRECTION')}
+ENTRY ZONE: {plan.get('ENTRY_ZONE')}
+STOP LOSS: {plan.get('STOP_LOSS')}
+TAKE PROFIT: {plan.get('TAKE_PROFIT')}
+RISK/REWARD: {plan.get('RISK_REWARD')}
+CONFIDENCE: {plan.get('CONFIDENCE')}%
 """
         )
+
 
         print("=" * 60)

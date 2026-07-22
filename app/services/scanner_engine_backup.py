@@ -1,4 +1,4 @@
-п»їfrom app.services.bybit_client import BybitClient
+from app.services.bybit_client import BybitClient
 
 
 SIGNALS = []
@@ -233,7 +233,7 @@ class ScannerEngine:
 
 
                         reasons.append(
-                            f"рџ¤– РР РѕС†РµРЅРёР» РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊ РІС…РѕРґР°: {confidence:.0%}"
+                            f"?? ИИ оценил вероятность входа: {confidence:.0%}"
                         )
 
 
@@ -384,7 +384,7 @@ def get_signals():
 
 
     print(
-        "РњРѕРЅРµС‚:",
+        "Монет:",
         len(symbols)
     )
 

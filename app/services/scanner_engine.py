@@ -1,4 +1,4 @@
-Ôªøfrom app.services.bybit_client import BybitClient
+from app.services.bybit_client import BybitClient
 from app.services.market_analyzer import MarketAnalyzer
 
 
@@ -134,7 +134,7 @@ def get_signals():
 
 
     print(
-        "–ú–û–ù–ï–¢:",
+        "ÃŒÕ≈“:",
         len(symbols)
     )
 
@@ -166,7 +166,7 @@ def get_signals():
 
 
     print(
-        "–°–ò–ì–ù–ê–õ–û–í:",
+        "—»√Õ¿ÀŒ¬:",
         len(SIGNALS)
     )
 

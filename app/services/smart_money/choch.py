@@ -1,4 +1,4 @@
-﻿class CHoCHEngine:
+class CHoCHEngine:
 
 
     def analyze(

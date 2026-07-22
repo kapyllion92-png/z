@@ -1,90 +1,243 @@
-class FVGEngine:
-
-    def analyze(self, candles):
-
-        result = {
-            "fair_value_gap": False,
-            "bullish_fvg": False,
-            "bearish_fvg": False,
-            "imbalance": False,
-            "filled": False,
-            "score": 0,
-            "reasons": []
-        }
+def _num(v):
+    try:
+        return float(v)
+    except:
+        return 0.0
 
 
-        if len(candles) < 3:
-            return result
+def _get(c,key):
+
+    if isinstance(c,dict):
+        return _num(c.get(key,0))
+
+    idx={
+        "open":1,
+        "high":2,
+        "low":3,
+        "close":4,
+        "volume":5
+    }
+
+    try:
+        return _num(c[idx[key]])
+    except:
+        return 0
 
 
-        c1 = candles[-3]
-        c2 = candles[-2]
-        c3 = candles[-1]
+
+def fvg_engine_v4000(candles):
+
+    fvgs=[]
+
+    volumes=[
+        _get(c,"volume")
+        for c in candles
+    ]
+
+    avg_volume=sum(volumes)/len(volumes) if volumes else 0
 
 
-        # Bullish Fair Value Gap
 
-        if c1["high"] < c3["low"]:
+    for i in range(len(candles)-3):
 
-            result["fair_value_gap"] = True
-            result["bullish_fvg"] = True
-            result["imbalance"] = True
-
-            result["score"] += 15
-
-            result["reasons"].append(
-                "BULLISH FAIR VALUE GAP"
-            )
+        c1=candles[i]
+        c2=candles[i+1]
+        c3=candles[i+2]
 
 
-        # Bearish Fair Value Gap
+        h1=_get(c1,"high")
+        l1=_get(c1,"low")
 
-        if c1["low"] > c3["high"]:
+        h3=_get(c3,"high")
+        l3=_get(c3,"low")
 
-            result["fair_value_gap"] = True
-            result["bearish_fvg"] = True
-            result["imbalance"] = True
-
-            result["score"] += 15
-
-            result["reasons"].append(
-                "BEARISH FAIR VALUE GAP"
-            )
+        v2=_get(c2,"volume")
 
 
-        # FVG Mitigation
-
-        if result["fair_value_gap"]:
-
-            gap_high = max(
-                c1["high"],
-                c3["high"]
-            )
-
-            gap_low = min(
-                c1["low"],
-                c3["low"]
-            )
-
-
-            price = c3["close"]
-
-
-            if gap_low <= price <= gap_high:
-
-                result["filled"] = True
-
-                result["score"] += 5
-
-                result["reasons"].append(
-                    "FVG MITIGATION"
-                )
-
-
-        result["score"] = min(
-            result["score"],
-            100
+        volume_ratio = (
+            v2/avg_volume
+            if avg_volume
+            else 1
         )
 
 
-        return result
+        # bullish FVG
+
+        if l3 > h1:
+
+            gap=[round(h1,4),round(l3,4)]
+
+            score=70
+
+            reasons=[
+                "BULLISH FVG",
+                "PRICE IMBALANCE"
+            ]
+
+
+            if volume_ratio > 1.1:
+                score+=10
+                reasons.append(
+                    "VOLUME CONFIRMATION"
+                )
+
+
+            if abs(_get(c2,"close")-_get(c2,"open")) > (
+                (_get(c2,"high")-_get(c2,"low"))*0.5
+            ):
+                score+=10
+                reasons.append(
+                    "DISPLACEMENT CANDLE"
+                )
+
+
+            fvgs.append({
+
+                "event":
+                "BULLISH FVG INSTITUTIONAL v4000",
+
+                "type":
+                "SMART MONEY FAIR VALUE GAP",
+
+                "direction":
+                "LONG",
+
+                "zone":
+                gap,
+
+                "score":
+                min(score,100),
+
+                "confidence":
+                min(score,100),
+
+                "quality":
+                (
+                "A+ INSTITUTIONAL PREMIUM"
+                if score>=90
+                else
+                "A INSTITUTIONAL"
+                if score>=80
+                else
+                "B QUALITY"
+                ),
+
+                "fresh":
+                True,
+
+                "status":
+                "ACTIVE",
+
+                "reasons":
+                reasons
+            })
+
+
+
+        # bearish FVG
+
+        if h3 < l1:
+
+
+            gap=[
+                round(h3,4),
+                round(l1,4)
+            ]
+
+
+            score=70
+
+            reasons=[
+                "BEARISH FVG",
+                "PRICE IMBALANCE"
+            ]
+
+
+            if volume_ratio > 1.1:
+                score+=10
+                reasons.append(
+                    "VOLUME CONFIRMATION"
+                )
+
+
+            if abs(_get(c2,"close")-_get(c2,"open")) > (
+                (_get(c2,"high")-_get(c2,"low"))*0.5
+            ):
+                score+=10
+                reasons.append(
+                    "DISPLACEMENT CANDLE"
+                )
+
+
+            fvgs.append({
+
+                "event":
+                "BEARISH FVG INSTITUTIONAL v4000",
+
+                "type":
+                "SMART MONEY FAIR VALUE GAP",
+
+                "direction":
+                "SHORT",
+
+                "zone":
+                gap,
+
+                "score":
+                min(score,100),
+
+                "confidence":
+                min(score,100),
+
+                "quality":
+                (
+                "A+ INSTITUTIONAL PREMIUM"
+                if score>=90
+                else
+                "A INSTITUTIONAL"
+                if score>=80
+                else
+                "B QUALITY"
+                ),
+
+                "fresh":
+                True,
+
+                "status":
+                "ACTIVE",
+
+                "reasons":
+                reasons
+            })
+
+
+
+    return {
+
+        "tested_candles":
+        len(candles),
+
+        "fvg_found":
+        len(fvgs),
+
+        "institutional_fvg":
+        len(
+            [
+            f for f in fvgs
+            if "INSTITUTIONAL" in f["quality"]
+            ]
+        ),
+
+        "average_confidence":
+        round(
+            sum(
+                f["confidence"]
+                for f in fvgs
+            )/len(fvgs),
+            2
+        )
+        if fvgs else 0,
+
+        "top_fvg":
+        fvgs[:10]
+    }

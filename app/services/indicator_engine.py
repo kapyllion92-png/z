@@ -1,4 +1,4 @@
-﻿class IndicatorEngine:
+class IndicatorEngine:
 
 
     def analyze(self, candles):

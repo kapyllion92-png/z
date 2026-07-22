@@ -1,4 +1,4 @@
-﻿from pybit.unified_trading import HTTP
+from pybit.unified_trading import HTTP
 
 
 class BybitClient:

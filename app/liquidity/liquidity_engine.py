@@ -1,4 +1,4 @@
-﻿import pandas as pd
+import pandas as pd
 
 def find_equal_highs(df, tolerance=0.001):
     pools=[]

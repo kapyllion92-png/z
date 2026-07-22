@@ -1,213 +1,140 @@
 ﻿class ScoreEngine:
 
-
     def calculate(
         self,
         features,
-        structure=None,
-        pattern=0
+        smart_money=None,
+        confidence=0
     ):
 
-        score = 50
+        score = 0
         reasons = []
 
 
-        rsi = features.get("rsi",50)
-        macd = features.get("macd",0)
-        trend = features.get("trend","")
-        momentum = features.get("momentum",0)
-        volume = features.get("volume_ratio",0)
+        if not isinstance(smart_money, dict):
+            smart_money = {}
 
+
+        if not isinstance(features, dict):
+            features = {}
 
 
         # RSI
 
-        if rsi < 20:
+        rsi = features.get(
+            "rsi",
+            50
+        )
 
-            score -= 25
+        if rsi < 30:
 
-            reasons.append(
-                "RSI extreme oversold - риск отскока"
-            )
-
-        elif rsi < 30:
-
-            score -= 10
+            score += 10
 
             reasons.append(
-                "RSI oversold"
+                "RSI OVERSOLD"
             )
 
-        elif rsi > 80:
-
-            score -= 25
-
-            reasons.append(
-                "RSI extreme overbought"
-            )
 
         elif rsi > 70:
 
-            score -= 10
+            score += 10
 
             reasons.append(
-                "RSI overbought"
+                "RSI OVERBOUGHT"
             )
-
-
-
-        # MACD
-
-        if macd < 0:
-
-            score += 15
-
-            reasons.append(
-                "MACD bearish"
-            )
-
-        else:
-
-            score += 15
-
-            reasons.append(
-                "MACD bullish"
-            )
-
 
 
         # TREND
 
+        trend = features.get(
+            "trend",
+            ""
+        )
+
+
         if trend == "BEARISH":
 
-            score += 15
+            score += 10
 
             reasons.append(
-                "EMA bearish"
+                "BEARISH TREND"
             )
 
 
         elif trend == "BULLISH":
 
-            score += 15
-
-            reasons.append(
-                "EMA bullish"
-            )
-
-
-
-        # MOMENTUM
-
-        if momentum < 0:
-
             score += 10
 
             reasons.append(
-                "Momentum bearish"
-            )
-
-        else:
-
-            score += 10
-
-            reasons.append(
-                "Momentum bullish"
+                "BULLISH TREND"
             )
 
 
+        # SMART MONEY
 
-        # VOLUME
-
-        if volume > 1.5:
-
-            score += 5
-
-            reasons.append(
-                "Volume confirmation"
-            )
-
-
-
-        score = max(
-            0,
-            min(
-                score,
-                100
-            )
+        sm_score = smart_money.get(
+            "score",
+            0
         )
 
 
+        if isinstance(sm_score,(int,float)):
 
-        # SIGNAL
+            score += min(
+                int(sm_score),
+                30
+            )
 
-        if trend == "BEARISH" and macd < 0:
 
-            signal = "SHORT"
+            if sm_score > 0:
 
-        elif trend == "BULLISH" and macd > 0:
+                reasons.append(
+                    "SMART MONEY"
+                )
 
-            signal = "LONG"
+
+        # CONFIDENCE
+
+        if confidence >= 85:
+
+            score += 10
+
+            reasons.append(
+                "HIGH CONFIDENCE"
+            )
+
+
+        score=min(
+            100,
+            score
+        )
+
+
+        if score >=85:
+
+            grade="A+"
+
+        elif score>=70:
+
+            grade="A"
+
+        elif score>=55:
+
+            grade="B"
 
         else:
 
-            signal = "WAIT"
+            grade="LOW"
 
-
-
-        confidence = score
-
-
-
-        if confidence >= 80:
-
-            status = "READY"
-
-        elif confidence >= 60:
-
-            status = "WATCH"
-
-        else:
-
-            status = "NO_TRADE"
-
-
-
-        if rsi < 20:
-
-            status = "WATCH"
-
-
-
-        indicator_score = features.get('indicator_score',0)
-
-        if indicator_score:
-            score += int(indicator_score*0.25)
-            reasons.append(f'INDICATOR SCORE {indicator_score}')
-
-        adx = features.get('adx',0)
-
-        if adx > 25:
-            score += 5
-            reasons.append('ADX TREND CONFIRMATION')
-
-        supertrend = features.get('supertrend','')
-
-        if supertrend:
-            score += 5
-            reasons.append(f'SUPERTREND {supertrend}')
 
         return {
 
-            "signal": signal,
+            "score":score,
 
-            "score": score,
+            "confidence":confidence,
 
-            "confidence": confidence,
+            "grade":grade,
 
-            "status": status,
-
-            "reasons": reasons
+            "reasons":reasons
 
         }
-

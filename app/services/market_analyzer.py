@@ -27,6 +27,9 @@ class MarketAnalyzer:
 
         features = self.indicators.analyze(candles)
 
+        if "indicator_score" not in features:
+            features["indicator_score"] = 0
+
         smart_money = self.smart_money.analyze(candles)
 
         try:

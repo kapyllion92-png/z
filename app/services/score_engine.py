@@ -179,6 +179,24 @@
 
 
 
+        indicator_score = features.get('indicator_score',0)
+
+        if indicator_score:
+            score += int(indicator_score*0.25)
+            reasons.append(f'INDICATOR SCORE {indicator_score}')
+
+        adx = features.get('adx',0)
+
+        if adx > 25:
+            score += 5
+            reasons.append('ADX TREND CONFIRMATION')
+
+        supertrend = features.get('supertrend','')
+
+        if supertrend:
+            score += 5
+            reasons.append(f'SUPERTREND {supertrend}')
+
         return {
 
             "signal": signal,
@@ -192,3 +210,4 @@
             "reasons": reasons
 
         }
+
